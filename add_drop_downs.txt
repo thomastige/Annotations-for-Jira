@@ -1,0 +1,67 @@
+javascript 
+var values = [, To do, To Investigate, To Test, Waiting for answer, Needs BAdiscussion, WIP, Awaiting code review, To Redofix, Ready for check-in, Checked in, Done];
+
+function findElements(name){
+	var elArray = [];
+	var tmp = document.getElementById(ghx-content-group).getElementsByTagName();
+	
+	var regex = new RegExp((^s) + name + (s$));
+	for (var i = 0; itmp.length;i++){
+		if (tmp[i].className.indexOf(name)  -1){
+			elArray.push(tmp[i]);
+		}
+	}
+	return elArray;
+}
+
+
+function addDropDowns(){
+	var elements = findElements(ghx-issue-compact);
+	for (var i=0;ielements.length; i++){		
+		var curr = elements[i];
+		if  (curr.getAttribute(class).indexOf(ghx-done) == -1){
+			var rightEdge = curr.childNodes[0].childNodes[1];
+			currId = curr.getAttribute(data-issue-key);
+			var select = document.createElement(select);
+			select.setAttribute(name, mySelect);
+			select.setAttribute(id, mySelect);
+
+			for (var j=0;jvalues.length;j++){
+				var option = document.createElement('option');				
+				option.text = values[j];
+
+				select.add(option, j);
+			}
+			select.value= localStorage.getItem(currId);
+			rightEdge.insertBefore(select, rightEdge.childNodes[0]);
+
+			var input = document.createElement(input);
+			var inputValue = localStorage.getItem(currId + 'input');
+			if (inputValue != 'undefined'){
+				input.value = inputValue;
+			}
+			rightEdge.insertBefore(input, rightEdge.childNodes[1]);
+		} else {
+			var rightEdge = curr.childNodes[0].childNodes[1];
+			currId = curr.getAttribute(data-issue-key);
+			var select = document.createElement(select);
+			select.setAttribute(name, mySelect);
+			select.setAttribute(id, mySelect);
+			var option = document.createElement('option');				
+			option.text = 'Done';
+			select.add(option, 0);
+			select.disabled = true;
+			rightEdge.insertBefore(select, rightEdge.childNodes[0]);
+
+
+			var input = document.createElement(input);
+			var inputValue = localStorage.getItem(currId + 'input');
+			if (inputValue != 'undefined'){
+				input.value = inputValue;
+			}
+			rightEdge.insertBefore(input, rightEdge.childNodes[1]);
+		}
+	}
+}
+
+addDropDowns();

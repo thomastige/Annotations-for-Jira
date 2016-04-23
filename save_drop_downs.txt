@@ -1,0 +1,42 @@
+javascript: 
+
+function findElements(name){
+	var elArray = [];
+	var tmp = document.getElementById("ghx-content-group").getElementsByTagName("*");
+	
+	var regex = new RegExp("(^|\\s)" + name + "(\\s|$)");
+	for (var i = 0; i<tmp.length;i++){
+		if (tmp[i].className.indexOf(name) > -1){
+			elArray.push(tmp[i]);
+		}
+	}
+	return elArray;
+}
+
+
+function saveDropDowns(){
+	var elements = findElements("ghx-issue-compact");
+	for (var i=0;i<elements.length; i++){		
+		var curr = elements[i];
+		var rightEdge = curr.childNodes[0].childNodes[1];
+		var currId = curr.getAttribute("data-issue-key");
+		var currDropDown = (rightEdge.childNodes[0]);
+		if (currDropDown != null){
+			var value = currDropDown.value;
+			if (value != ''){
+				localStorage.setItem(currId, value);
+			}
+		}
+
+		var currInput = rightEdge.childNodes[1];
+		if (currInput != null){
+		var inputValue = currInput.value;
+			if (inputValue != ''){
+				localStorage.setItem(currId + 'input', inputValue);
+			}
+		}
+
+	}
+}
+
+saveDropDowns();
