@@ -24,7 +24,9 @@ document.getElementById("saveButton").addEventListener("click", function() {
 	var dropDownsValues = [];
 	for (var i=0; i<dropDowns.length; ++i){
 		var textValue = dropDowns[i].value;
-		dropDownsValues.push(textValue.split("\n"));
+		if (textValue != ''){
+			dropDownsValues.push(textValue.split("\n"));
+		}
 	}
 	localStorage.setItem("jiraLocationConfig", jiraLocation);
 	localStorage.setItem("dropDownArraysConfig", JSON.stringify(dropDownsValues));
@@ -53,7 +55,6 @@ function loadConfig(){
 		var content = dropDowns[i].toString();
 		content = content.split(',').join('\n');
 		newTextArea.value = content;
-		
 	}
 	
 }
