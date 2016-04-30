@@ -3,23 +3,22 @@
 */
 var values = [
 ["", "To do", "To Investigate", "To Test", "Waiting for answer", "Needs BA/discussion", "WIP", "Awaiting code review", "To Redo/fix", "Ready for check-in", "Checked in", "Done"]
-];
 /*
 To add a new dropdown, add a comma and an array, as follows:
 ,["element 1", "element 2", ...]
 */
+];
 
 function findElements(name){
-	var elArray = [];
+	var array = [];
 	var tmp = document.getElementById("ghx-content-group").getElementsByTagName("*");
-	
 	var regex = new RegExp("(^|\\s)" + name + "(\\s|$)");
 	for (var i = 0; i<tmp.length;i++){
 		if (tmp[i].className.indexOf(name) > -1){
-			elArray.push(tmp[i]);
+			array.push(tmp[i]);
 		}
 	}
-	return elArray;
+	return array;
 }
 
 function saveDropDowns(){
@@ -82,12 +81,13 @@ function createInputNode(currId){
 function addDropDowns(){
 	var location = window.location.href;
 	if (location.indexOf("browse") != -1){
+		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createCopyPasteButton());
 		var currId = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
+		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
 		for (var counter=0;counter<values.length;counter++){
 			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createSelectNode(currId, false, counter));
 		}
 		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createInputNode(currId));
-		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
 	}
 	else if (location.indexOf("RapidBoard.jspa") != -1){
 		var elements = findElements("ghx-issue-compact");
@@ -176,7 +176,7 @@ function stashButtonListener(){
 function toggleButton(){
 	var buttonText = document.getElementById('stashButton').childNodes[0].textContent;
 	if (buttonText == "stash"){
-		document.getElementById("stashButton").childNodes[0].textContent = 'unstash';
+		document.getElementById("stashButton").childNodes[0].textContent = 'destash';
 	} else {
 		document.getElementById("stashButton").childNodes[0].textContent = 'stash';
 	}
@@ -201,6 +201,36 @@ function getLocationInStash(key){
 	return location;
 }
 
+
+/*
+	AUTOMATIC COPY PASTE
+*/
+
+function createCopyPasteButton(){
+	var btn = document.createElement("button");
+	btn.setAttribute("id", "copyButton");
+	var label = "copy";
+	var text = document.createTextNode(label);
+	btn.appendChild(text);
+	var key = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
+	var label = document.getElementsByClassName("aui-page-header-main")[0].childNodes[1].childNodes[0].textContent;
+	btn.addEventListener("click", function() {
+		var copyFrom = document.createElement("textarea");
+		var key = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
+		var label = document.getElementsByClassName("aui-page-header-main")[0].childNodes[1].childNodes[0].textContent;
+		copyFrom.textContent = key + "\n" + label;
+		var body = document.getElementsByTagName('body')[0];
+		body.appendChild(copyFrom);
+		copyFrom.select();
+		document.execCommand('copy');
+		body.removeChild(copyFrom);
+		document.getElementById("copyButton").childNodes[0].textContent = 'copied!';
+		setTimeout(function() {document.getElementById("copyButton").childNodes[0].textContent = 'copy';}, 1000);
+	});
+	return btn;
+}
+
+
 /*
 	DRIVER FUNCTION
 */
@@ -214,5 +244,3 @@ function triggerCustomization(){
 
 /*TODO: find more elegant solution*/
 setTimeout(triggerCustomization, 750);
-
-
