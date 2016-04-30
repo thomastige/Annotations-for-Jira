@@ -17,72 +17,28 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "stashConfig"}, func
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "notesConfig"}, function(response) {
 	notesEnabled = response.data;
 });
+
 /*
-	ADD DROP DOWNS TO THE REGULAR BUGS
+	AGILE BOARD COMBOBOXES / NOTE FIELDS
 */
-
-//["", "To do", "To Investigate", "To Test", "Waiting for answer", "Needs BA/discussion", "WIP", "Awaiting code review", "To Redo/fix", "Ready for check-in", "Checked in", "Done"]
-/*
-To add a new dropdown, add a comma and an array, as follows:
-,["element 1", "element 2", ...]
-*/
-//];
-
-
-function findElements(name){
-	var array = [];
-	var tmp = document.getElementById("ghx-content-group").getElementsByTagName("*");
-	var regex = new RegExp("(^|\\s)" + name + "(\\s|$)");
-	for (var i = 0; i<tmp.length;i++){
-		if (tmp[i].className.indexOf(name) > -1){
-			array.push(tmp[i]);
-		}
-	}
-	return array;
-}
 
 function saveDropDowns(){
-	var elements = findElements("ghx-issue-compact");
-	for (var i=0;i<elements.length; i++){		
-		var curr = elements[i];
-		var rightEdge = curr.childNodes[0].childNodes[1];
-		if (rightEdge == null){
-			rightEdge = curr.childNodes[1].childNodes[3].childNodes[1];
-		}
-		
-		if (rightEdge != null){
-			for (var iterator =0; iterator < rightEdge.childNodes.length; ++iterator){
-				try {
-					var id = rightEdge.childNodes[iterator].getAttribute("id");
-					if (id != null){
-							var currNode = (rightEdge.childNodes[iterator]);
-							if (currNode != null){
-								var value = currNode.value;
-								localStorage.setItem(currNode.getAttribute("id"), value);
-							}
-						}
-				//Not a great solution, but need to figure it out
-				//}catch(err){console.log(err)}
-				}catch(err){}
-			} 
-		}
+	var elements = document.getElementsByClassName("saveable");
+	for (var i=0; i<elements.length; ++i){
+		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
 	}
 }
 
 function createSelectNode(currId, finished = false, array){
 	var select = document.createElement("select");
 	select.setAttribute("id", currId + "customSelect" + array);
+	select.setAttribute("class", "saveable");
 	for (var j=0;j<values[array].length;j++){
-		var option = document.createElement('option');				
+		var option = document.createElement('option');
 		option.text = values[array][j];
 		select.add(option, j);
 	}
-	if  (finished == true){
-		select.value = 'Done';
-		select.disabled = true;
-	} else {
-		select.value= localStorage.getItem(select.getAttribute("id"));
-	}
+	select.value= localStorage.getItem(select.getAttribute("id"));
 	select.addEventListener("click", saveDropDowns);
 	return select;
 }
@@ -90,6 +46,7 @@ function createSelectNode(currId, finished = false, array){
 function createInputNode(currId){
 	var input = document.createElement("input");
 	input.setAttribute("id",currId+ "customInput");
+	input.setAttribute("class", "saveable");
 	var inputValue = localStorage.getItem(input.getAttribute("id"));
 	if (inputValue != 'undefined'){
 		input.value = inputValue;
@@ -114,7 +71,7 @@ function addDropDowns(){
 		}
 	}
 	else if (location.indexOf("RapidBoard.jspa") != -1){
-		var elements = findElements("ghx-issue-compact");
+		var elements = document.getElementsByClassName("ghx-issue-compact");
 		for (var i=0;i<elements.length; i++){		
 			var curr = elements[i];
 			
@@ -129,9 +86,6 @@ function addDropDowns(){
 		}
 	}
 }
-
-
-
 
 /*
 	CREATE BUG STASH
@@ -164,6 +118,7 @@ function createStashComponent(){
 				document.getElementById(inputs[ctr].getAttribute("id")).value = localStorage.getItem(inputs[ctr].getAttribute("id"));
 				document.getElementById(inputs[ctr].getAttribute("id")).addEventListener("blur", saveDropDowns);
 				document.getElementById(inputs[ctr].getAttribute("id")).size = 100;
+				inputs[ctr].setAttribute("class", "saveable");
 			}
 		}
 	}
@@ -226,7 +181,6 @@ function getLocationInStash(key){
 	}
 	return location;
 }
-
 
 /*
 	AUTOMATIC COPY PASTE
