@@ -1,13 +1,33 @@
 /*
+	CHECK IF RIGHT SITE
+*/
+var jiraLocation = '';
+var values = [];
+var stashEnabled;
+var notesEnabled;
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "jiraLocationConfig"}, function(response) {
+	jiraLocation = response.data;
+});
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "dropDownArraysConfig"}, function(response) {
+  values = JSON.parse(response.data);
+});
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "stashConfig"}, function(response) {
+	stashEnabled = response.data;
+});
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "notesConfig"}, function(response) {
+	notesEnabled = response.data;
+});
+/*
 	ADD DROP DOWNS TO THE REGULAR BUGS
 */
-var values = [
-["", "To do", "To Investigate", "To Test", "Waiting for answer", "Needs BA/discussion", "WIP", "Awaiting code review", "To Redo/fix", "Ready for check-in", "Checked in", "Done"]
+
+//["", "To do", "To Investigate", "To Test", "Waiting for answer", "Needs BA/discussion", "WIP", "Awaiting code review", "To Redo/fix", "Ready for check-in", "Checked in", "Done"]
 /*
 To add a new dropdown, add a comma and an array, as follows:
 ,["element 1", "element 2", ...]
 */
-];
+//];
+
 
 function findElements(name){
 	var array = [];
@@ -82,12 +102,16 @@ function addDropDowns(){
 	var location = window.location.href;
 	if (location.indexOf("browse") != -1){
 		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createCopyPasteButton());
-		var currId = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
-		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
+		if (stashEnabled == 'true'){
+			var currId = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
+			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
+		}
 		for (var counter=0;counter<values.length;counter++){
 			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createSelectNode(currId, false, counter));
 		}
-		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createInputNode(currId));
+		if (notesEnabled == 'true'){
+			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createInputNode(currId));
+		}
 	}
 	else if (location.indexOf("RapidBoard.jspa") != -1){
 		var elements = findElements("ghx-issue-compact");
@@ -96,9 +120,11 @@ function addDropDowns(){
 			
 			var rightEdge = curr.childNodes[0].childNodes[1];
 			currId = curr.getAttribute("data-issue-key");
-			rightEdge.insertBefore(createInputNode(currId), rightEdge.childNodes[0]);
+			if (notesEnabled == 'true'){
+				rightEdge.insertBefore(createInputNode(currId), rightEdge.childNodes[0]);
+			}
 			for (var counter=0;counter<values.length;counter++){
-				rightEdge.insertBefore(createSelectNode(currId, false, counter), rightEdge.childNodes[0]);
+				rightEdge.insertBefore(createSelectNode(currId, false, counter), rightEdge.childNodes[counter]);
 			}
 		}
 	}
@@ -235,11 +261,13 @@ function createCopyPasteButton(){
 	DRIVER FUNCTION
 */
 function triggerCustomization(){
-	//DEBUG
-	//localStorage.setItem('CustomIssueStash',JSON.stringify([['pmo-41748', 'test', 'test']]));
-	//END DEBUG
-	addDropDowns();
-	createStashComponent();
+	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1){		
+		addDropDowns();
+		console.log(stashEnabled)
+		if (stashEnabled == 'true'){
+			createStashComponent();
+		}
+	}
 }
 
 /*TODO: find more elegant solution*/
