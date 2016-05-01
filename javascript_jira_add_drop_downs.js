@@ -73,8 +73,7 @@ function addDropDowns(){
 	else if (location.indexOf("RapidBoard.jspa") != -1){
 		var elements = document.getElementsByClassName("ghx-issue-compact");
 		for (var i=0;i<elements.length; i++){		
-			var curr = elements[i];
-			
+			var curr = elements[i];			
 			var rightEdge = curr.childNodes[0].childNodes[1];
 			currId = curr.getAttribute("data-issue-key");
 			if (notesEnabled == 'true'){
@@ -138,8 +137,8 @@ function createStashButton(inStash = false){
 }
 
 function stashButtonListener(){
-	var key = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
-	var label = document.getElementsByClassName("aui-page-header-main")[0].childNodes[1].childNodes[0].textContent;
+	var key = document.getElementById("key-val").getAttribute("data-issue-key");
+	var label = document.getElementById("summary-val").textContent;
 	var issues = JSON.parse(localStorage.getItem("CustomIssueStash"));
 	if (issues == null){
 		issues = [];
@@ -192,12 +191,10 @@ function createCopyPasteButton(){
 	var label = "copy";
 	var text = document.createTextNode(label);
 	btn.appendChild(text);
-	var key = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
-	var label = document.getElementsByClassName("aui-page-header-main")[0].childNodes[1].childNodes[0].textContent;
 	btn.addEventListener("click", function() {
 		var copyFrom = document.createElement("textarea");
-		var key = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
-		var label = document.getElementsByClassName("aui-page-header-main")[0].childNodes[1].childNodes[0].textContent;
+		var key = document.getElementById("key-val").getAttribute("data-issue-key");
+		var label = document.getElementById("summary-val").textContent;
 		copyFrom.textContent = key + "\n" + label;
 		var body = document.getElementsByTagName('body')[0];
 		body.appendChild(copyFrom);
