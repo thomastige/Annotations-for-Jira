@@ -5,6 +5,7 @@ var jiraLocation = '';
 var values = [];
 var stashEnabled;
 var notesEnabled;
+var cleanupEnabled;
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "jiraLocationConfig"}, function(response) {
 	jiraLocation = response.data;
 });
@@ -17,12 +18,18 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "stashConfig"}, func
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "notesConfig"}, function(response) {
 	notesEnabled = response.data;
 });
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "cleanupConfig"}, function(response) {
+	cleanupEnabled = response.data;
+});
 
 /*
 	AGILE BOARD COMBOBOXES / NOTE FIELDS
 */
 
 function saveDropDowns(){
+	if (cleanupEnabled == 'true'){
+		cleanUpLocalStorage();
+	}
 	var elements = document.getElementsByClassName("saveable");
 	for (var i=0; i<elements.length; ++i){
 		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
@@ -207,6 +214,17 @@ function createCopyPasteButton(){
 	return btn;
 }
 
+/*
+	LOCALSTORAGE CLEAN UP
+*/
+
+function cleanUpLocalStorage(){
+	for(var key in localStorage){
+		if (key.indexOf('customInput') != -1 || key.indexOf('customSelect') != -1 || key.indexOf('stashNote') != -1){
+			localStorage.removeItem(key);
+		}
+	}
+}
 
 /*
 	DRIVER FUNCTION

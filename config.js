@@ -1,10 +1,9 @@
-var counter = 0;
-
 document.getElementById("addTextField").addEventListener("click", addDropDown);
 
 loadConfig();
 function addDropDown(){
 	var newText = document.createElement("textArea");
+	var counter = 0;
 	newText.setAttribute("id", "dropDownField"+counter++);
 	newText.setAttribute("class", "dropDowns");
 	newText.style.height = "100px";
@@ -20,6 +19,7 @@ document.getElementById("saveButton").addEventListener("click", function() {
 	var jiraLocation = document.getElementById("jiraLocation").value;
 	var notesEnabled = document.getElementById("notesEnabled").checked;
 	var stashEnabled = document.getElementById("stashEnabled").checked;
+	var cleanupEnabled = document.getElementById("cleanupEnabled").checked;
 	var dropDowns = document.getElementsByClassName("dropDowns");
 	var dropDownsValues = [];
 	for (var i=0; i<dropDowns.length; ++i){
@@ -31,6 +31,7 @@ document.getElementById("saveButton").addEventListener("click", function() {
 	localStorage.setItem("jiraLocationConfig", jiraLocation);
 	localStorage.setItem("dropDownArraysConfig", JSON.stringify(dropDownsValues));
 	localStorage.setItem("notesConfig", notesEnabled);
+	localStorage.setItem("cleanupConfig", cleanupEnabled);
 	localStorage.setItem("stashConfig", stashEnabled);
 		
 	//console.log(finalJSON);
@@ -41,6 +42,7 @@ function loadConfig(){
 	var jiraLocation = localStorage.getItem("jiraLocationConfig");
 	var notes = localStorage.getItem("notesConfig");
 	var stash = localStorage.getItem("stashConfig");
+	var cleanup = localStorage.getItem("cleanupConfig");
 	var dropDowns = JSON.parse(localStorage.getItem("dropDownArraysConfig"));
 
 	document.getElementById("jiraLocation").value = jiraLocation;
@@ -49,6 +51,9 @@ function loadConfig(){
 	}
 	if (stash == 'true'){
 		document.getElementById("stashEnabled").checked = true;
+	}
+	if (cleanup == 'true'){
+		document.getElementById("cleanupEnabled").checked = true;
 	}
 	for (var i = 0; i<dropDowns.length; ++i){
 		var newTextArea = addDropDown();

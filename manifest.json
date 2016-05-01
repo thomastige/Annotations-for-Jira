@@ -18,7 +18,7 @@
         "matches": [
             "https://*/*"
             ],
-        "js": ["javascript_jira_add_drop_downs.js"],
+        "js": ["jira_awesomeificator.js"],
         "run_at": "document_end"
         }
     ], 
