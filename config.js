@@ -1,5 +1,17 @@
 document.getElementById("addTextField").addEventListener("click", addDropDown);
 
+/*
+	INITIAL LOAD -- SET DEFAULT VALUES
+*/
+if(localStorage.getItem("initialized") != 'true'){
+	localStorage.setItem("dropDownArraysConfig", JSON.stringify([["", "To do", "To Investigate", "To Test", "Waiting for answer", "Needs BA/discussion", "WIP", "Awaiting code review", "To Redo/fix", "Ready for check-in", "Checked in", "Done"]]));
+	localStorage.setItem("notesConfig", true);
+	localStorage.setItem("cleanupConfig", true);
+	localStorage.setItem("stashConfig", true);
+	
+	localStorage.setItem("initialized", true);
+}
+
 loadConfig();
 function addDropDown(){
 	var newText = document.createElement("textArea");
