@@ -15,3 +15,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     else
       sendResponse({}); // snub them.
 });
+
+
+/*
+	OPEN CONFIG ON INSTALL
+*/
+chrome.runtime.onInstalled.addListener(function (object) {
+    chrome.tabs.create({url: chrome.extension.getURL('config.html')});
+});

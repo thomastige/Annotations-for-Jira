@@ -26,10 +26,22 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "cleanupConfig"}, fu
 	AGILE BOARD COMBOBOXES / NOTE FIELDS
 */
 
-function saveDropDowns(){
+function save(){
 	if (cleanupEnabled == 'true'){
 		cleanUpLocalStorage();
 	}
+	saveStash();
+	saveSaveables();
+}
+
+function saveStash(){
+	var elements = document.getElementsByClassName("stashNote");
+	for (var i=0; i<elements.length; ++i){
+		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
+	}
+}
+
+function saveSaveables(){
 	var elements = document.getElementsByClassName("saveable");
 	for (var i=0; i<elements.length; ++i){
 		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
@@ -46,7 +58,7 @@ function createSelectNode(currId, finished = false, array){
 		select.add(option, j);
 	}
 	select.value= localStorage.getItem(select.getAttribute("id"));
-	select.addEventListener("click", saveDropDowns);
+	select.addEventListener("click", save);
 	return select;
 }
 
@@ -58,7 +70,7 @@ function createInputNode(currId){
 	if (inputValue != 'undefined'){
 		input.value = inputValue;
 	}
-	input.addEventListener("blur", saveDropDowns);
+	input.addEventListener("blur", save);
 	return input;
 }
 
@@ -67,7 +79,7 @@ function addDropDowns(){
 	if (location.indexOf("browse") != -1){
 		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createCopyPasteButton());
 		if (stashEnabled == 'true'){
-			var currId = document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].childNodes[1].childNodes[0].getAttribute("data-issue-key");
+			var currId = document.getElementById("key-val").getAttribute("data-issue-key");
 			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
 		}
 		for (var counter=0;counter<values.length;counter++){
@@ -75,7 +87,11 @@ function addDropDowns(){
 		}
 		if (notesEnabled == 'true'){
 			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createInputNode(currId));
-		}
+		}		
+		var notepadDiv = document.createElement("div");
+		notepadDiv.innerHTML = '<br><div class="module toggle-wrap"> <div id="greenhopper-agile-issue-web-panel_heading" class="mod-header">  <h2 class="toggle-title">Notepad</h2> </div> <div class="mod-content"><ul class="item-details ghx-separated" id="notePadContainer"> </ul> </div> </div>';
+		document.getElementById("viewissuesidebar").appendChild(notepadDiv);
+		document.getElementById("notePadContainer").appendChild(createNotePadComponent(currId));
 	}
 	else if (location.indexOf("RapidBoard.jspa") != -1){
 		var elements = document.getElementsByClassName("ghx-issue-compact");
@@ -122,9 +138,8 @@ function createStashComponent(){
 			var inputs = document.getElementsByClassName("stashNote");
 			for (var ctr = 0; ctr<inputs.length; ++ctr){
 				document.getElementById(inputs[ctr].getAttribute("id")).value = localStorage.getItem(inputs[ctr].getAttribute("id"));
-				document.getElementById(inputs[ctr].getAttribute("id")).addEventListener("blur", saveDropDowns);
+				document.getElementById(inputs[ctr].getAttribute("id")).addEventListener("blur", save);
 				document.getElementById(inputs[ctr].getAttribute("id")).size = 100;
-				inputs[ctr].setAttribute("class", "saveable");
 			}
 		}
 	}
@@ -154,7 +169,7 @@ function stashButtonListener(){
 	if (loc>-1){
 		issues.splice(loc, 1);
 	} else {
-		issues.push([key, label, '']);
+		issues.push([key, label]);
 	}
 	localStorage.setItem("CustomIssueStash", JSON.stringify(issues));
 	toggleButton();
@@ -215,13 +230,34 @@ function createCopyPasteButton(){
 }
 
 /*
+	NOTE PAD
+*/
+
+function createNotePadComponent(currId){
+	var notePad = document.createElement("textarea");
+	notePad.setAttribute("class", "saveable");
+	notePad.setAttribute("id", currId+"notePad");
+	var content = localStorage.getItem(notePad.getAttribute("id"));
+	if (content != null){
+		notePad.value = content;
+	}
+	notePad.rows = 10;
+	notePad.cols = 70;
+	notePad.addEventListener("blur", save);
+	return notePad;
+}
+
+/*
 	LOCALSTORAGE CLEAN UP
 */
 
 function cleanUpLocalStorage(){
-	for(var key in localStorage){
-		if (key.indexOf('customInput') != -1 || key.indexOf('customSelect') != -1 || key.indexOf('stashNote') != -1){
-			localStorage.removeItem(key);
+	var location = window.location.href;
+	if (location.indexOf("RapidBoard.jspa") != -1){
+		for(var key in localStorage){
+			if (key.indexOf('customInput') != -1 || key.indexOf('customSelect') != -1 || key.indexOf('stashNote') != -1){
+				localStorage.removeItem(key);
+			}
 		}
 	}
 }
@@ -232,7 +268,6 @@ function cleanUpLocalStorage(){
 function triggerCustomization(){
 	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1){		
 		addDropDowns();
-		console.log(stashEnabled)
 		if (stashEnabled == 'true'){
 			createStashComponent();
 		}
