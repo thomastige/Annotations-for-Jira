@@ -26,7 +26,7 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "cleanupConfig"}, fu
 	AGILE BOARD COMBOBOXES / NOTE FIELDS
 */
 
-function save(){
+function save(event){
 	if (cleanupEnabled == 'true'){
 		cleanUpLocalStorage();
 	}
@@ -48,7 +48,7 @@ function saveSaveables(){
 	}
 }
 
-function createSelectNode(currId, finished = false, array){
+function createSelectNode(currId, array){
 	var select = document.createElement("select");
 	select.setAttribute("id", currId + "customSelect" + array);
 	select.setAttribute("class", "saveable");
@@ -70,28 +70,25 @@ function createInputNode(currId){
 	if (inputValue != 'undefined'){
 		input.value = inputValue;
 	}
-	input.addEventListener("blur", save);
+	input.addEventListener("keyup", save);
 	return input;
 }
 
-function addDropDowns(){
+function addComponents(){
 	var location = window.location.href;
 	if (location.indexOf("browse") != -1){
-		document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createCopyPasteButton());
+		var currId = document.getElementById("key-val").getAttribute("data-issue-key");
+		document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createCopyPasteButton());
 		if (stashEnabled == 'true'){
-			var currId = document.getElementById("key-val").getAttribute("data-issue-key");
-			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
+			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
 		}
 		for (var counter=0;counter<values.length;counter++){
-			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createSelectNode(currId, false, counter));
+			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createSelectNode(currId, counter));
 		}
 		if (notesEnabled == 'true'){
-			document.getElementsByClassName("aui-nav aui-nav-breadcrumbs __skate")[0].appendChild(createInputNode(currId));
+			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createInputNode(currId));
 		}		
-		var notepadDiv = document.createElement("div");
-		notepadDiv.innerHTML = '<br><div class="module toggle-wrap"> <div id="greenhopper-agile-issue-web-panel_heading" class="mod-header">  <h2 class="toggle-title">Notepad</h2> </div> <div class="mod-content"><ul class="item-details ghx-separated" id="notePadContainer"> </ul> </div> </div>';
-		document.getElementById("viewissuesidebar").appendChild(notepadDiv);
-		document.getElementById("notePadContainer").appendChild(createNotePadComponent(currId));
+		document.getElementById("viewissuesidebar").appendChild(createNotePadComponent(currId));
 	}
 	else if (location.indexOf("RapidBoard.jspa") != -1){
 		var elements = document.getElementsByClassName("ghx-issue-compact");
@@ -103,7 +100,7 @@ function addDropDowns(){
 				rightEdge.insertBefore(createInputNode(currId), rightEdge.childNodes[0]);
 			}
 			for (var counter=0;counter<values.length;counter++){
-				rightEdge.insertBefore(createSelectNode(currId, false, counter), rightEdge.childNodes[counter]);
+				rightEdge.insertBefore(createSelectNode(currId, counter), rightEdge.childNodes[counter]);
 			}
 		}
 	}
@@ -120,29 +117,96 @@ function createStashComponent(){
 		if (issues == null){
 			localStorage.setItem("CustomIssueStash", JSON.stringify([]));
 		}
+		
 		if (issues != null && issues[0] != null){
-			var firstPart = '<div class="ghx-backlog-container ghx-sprint-active js-sprint-container ghx-open" id="testing"> <div class="ghx-backlog-header js-sprint-header"> <div class="ghx-expander"> <span class="ghx-iconfont aui-icon aui-icon-small aui-iconfont-expanded"/> </div> <div class="ghx-name"> <span class="field-value ghx-readonly">Bug Stash</span> </div> </div> <div class="ghx-meta ghx-disabled"> <div class="ghx-issues js-issue-list ghx-has-issues">';
-			var middle = "";
-			for (var i=0; i<issues.length; ++i){
-				var input = document.createElement("input");
-				input.setAttribute("id", "stashNote"+issues[i][0]);
-				input.setAttribute("class", "stashNote");
-				middle += '<div class="js-issue ghx-issue-compact ghx-type-52" data-issue-key="'+issues[i][0]+'"> <div class="ghx-issue-content"> <div class="ghx-row"> <div class="ghx-key"> <a href="/browse/' + issues[i][0] + '" title="'+ issues[i][0] +'" class="js-key-link">'+issues[i][0]+'</a> </div> <div class="ghx-summary" title="'+issues[i][1]+'"> <span class="ghx-inner">'+issues[i][1]+'</span> </div> </div> <div class="ghx-end ghx-row"> <span class="ghx-end"> '+ input.outerHTML +'  </div> </div> <div class="ghx-grabber" style="background-color:#8dcafd;"/> <div class="ghx-move-count"> </div> </div> </div>';
-			}
-			var lastPart =  '</div> </div> </div>';
+			var container = document.createElement("div");
+			container.setAttribute("class", "ghx-backlog-container ghx-sprint-active js-sprint-container ghx-open");
 
-			var div = document.createElement("div");
-			div.innerHTML = firstPart + middle + lastPart;
-			var contentGroup = document.getElementById("ghx-content-group");
-			contentGroup.insertBefore(div, contentGroup.childNodes[0]);
-			var inputs = document.getElementsByClassName("stashNote");
-			for (var ctr = 0; ctr<inputs.length; ++ctr){
-				document.getElementById(inputs[ctr].getAttribute("id")).value = localStorage.getItem(inputs[ctr].getAttribute("id"));
-				document.getElementById(inputs[ctr].getAttribute("id")).addEventListener("blur", save);
-				document.getElementById(inputs[ctr].getAttribute("id")).size = 100;
+			var header = document.createElement("div");
+			header.setAttribute("class", "ghx-backlog-header js-sprint-header");
+			var expander = document.createElement("div");
+			expander.setAttribute("class", "ghx-expander");
+			var expanderIcon = document.createElement("span");
+			expanderIcon.setAttribute("class", "ghx-iconfont aui-icon aui-icon-small aui-iconfont-expanded");
+			
+			var nameDiv = document.createElement("div");
+			nameDiv.setAttribute("class", "ghx-name");
+			var containerLabel = document.createElement("span");
+			containerLabel.setAttribute("class", "field-value ghx-readonly");
+			containerLabel.textContent = "Bug Stash";
+
+			var issueListContainer = document.createElement("div");
+			issueListContainer.setAttribute("class", "ghx-meta ghx-disabled");
+
+			expander.appendChild(expanderIcon);
+			header.appendChild(expander);
+			nameDiv.appendChild(containerLabel);
+			header.appendChild(nameDiv);
+			container.appendChild(header);
+			
+			var issueList = document.createElement("div");
+			issueList.setAttribute("class", "ghx-issues js-issue-list ghx-has-issues");
+			
+			for (var i=0; i<issues.length; ++i){
+				issueList.appendChild(createIssueRow(issues[i]));
 			}
+			container.appendChild(issueList);
+
+			var contentGroup = document.getElementById("ghx-content-group");
+			contentGroup.insertBefore(container, contentGroup.childNodes[0]);
 		}
 	}
+}
+
+function createIssueRow(issues){
+	var issueKey = issues[0];
+	var issueVal = issues[1];
+	var div = document.createElement("div");
+	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
+	div.setAttribute("data-issue-key", issueKey);
+	
+	var issueContent = document.createElement("div");
+	issueContent.setAttribute("class", "ghx-issue-content");
+	
+	var row = document.createElement("div");
+	row.setAttribute("class", "ghx-row");
+	
+	var key = document.createElement("div");
+	key.setAttribute("class", "ghx-key");
+	var keyContent = document.createElement("a");
+	keyContent.setAttribute("href", "/browse/" + issueKey);
+	keyContent.setAttribute("title", issueKey);
+	keyContent.setAttribute("class", "js-key-link");
+	keyContent.textContent = issueKey;
+	key.appendChild(keyContent);
+	row.appendChild(key);
+	
+	var summary = document.createElement("div");
+	summary.setAttribute("class", "ghx-summary");
+	summary.setAttribute("title", issueVal);
+	var summaryInner = document.createElement("span");
+	summaryInner.setAttribute("class", "ghx-inner");
+	summaryInner.textContent = issueVal;
+	summary.appendChild(summaryInner);
+	row.appendChild(summary);
+	
+	var endRow = document.createElement("div");
+	endRow.setAttribute("class", "ghx-end ghx-row");
+	var endRowInner = document.createElement("span");
+	endRowInner.setAttribute("class", "ghx-end");
+	var input = document.createElement("input");
+	input.setAttribute("id", "stashNote"+issueKey);
+	input.setAttribute("class", "stashNote");
+	input.value = localStorage.getItem(input.getAttribute("id"));
+	input.addEventListener("keyup", save);
+	input.size = 100;
+	endRowInner.appendChild(input);
+	endRow.appendChild(endRowInner);
+	
+	issueContent.appendChild(row);
+	issueContent.appendChild(endRow);
+	div.appendChild(issueContent);
+	return div
 }
 
 function createStashButton(inStash = false){
@@ -230,10 +294,24 @@ function createCopyPasteButton(){
 }
 
 /*
-	NOTE PAD
+	NOTEPAD COMPONENT
 */
 
 function createNotePadComponent(currId){
+	var toggleWrap = document.createElement("div");
+	toggleWrap.setAttribute("class", "module toggle-wrap");
+	var header = document.createElement("div");
+	header.setAttribute("class", "mod-header");
+	var label = document.createElement("h2");
+	label.setAttribute("class", "toggle-title")
+	label.textContent = 'Notepad';
+	var contentDiv = document.createElement("div");
+	contentDiv.setAttribute("class", "mod-content");
+	var ul = document.createElement("ul");
+	ul.setAttribute("class", "item-details ghx-separated");
+	ul.setAttribute("id", "notePadContainer");
+	//notepad start	
+	
 	var notePad = document.createElement("textarea");
 	notePad.setAttribute("class", "saveable");
 	notePad.setAttribute("id", currId+"notePad");
@@ -243,8 +321,15 @@ function createNotePadComponent(currId){
 	}
 	notePad.rows = 10;
 	notePad.cols = 70;
-	notePad.addEventListener("blur", save);
-	return notePad;
+	notePad.addEventListener("keyup", save);
+	
+	//notepad end
+	ul.appendChild(notePad);
+	header.appendChild(label);
+	toggleWrap.appendChild(header);
+	contentDiv.appendChild(ul);
+	toggleWrap.appendChild(contentDiv);
+	return toggleWrap;
 }
 
 /*
@@ -267,7 +352,7 @@ function cleanUpLocalStorage(){
 */
 function triggerCustomization(){
 	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1){		
-		addDropDowns();
+		addComponents();
 		if (stashEnabled == 'true'){
 			createStashComponent();
 		}
