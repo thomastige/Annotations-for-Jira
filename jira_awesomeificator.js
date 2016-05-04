@@ -26,7 +26,7 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "cleanupConfig"}, fu
 	AGILE BOARD COMBOBOXES / NOTE FIELDS
 */
 
-function save(event){
+function save(){
 	if (cleanupEnabled == 'true'){
 		cleanUpLocalStorage();
 	}
