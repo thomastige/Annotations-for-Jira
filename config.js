@@ -2,6 +2,7 @@ document.getElementById("addTextField").addEventListener("click", addDropDown);
 document.getElementById("stashEnabled").addEventListener("click", save);
 document.getElementById("notesEnabled").addEventListener("click", save);
 document.getElementById("cleanupEnabled").addEventListener("click", save);
+document.getElementById("detailDisabled").addEventListener("click", save);
 document.getElementById("jiraLocation").addEventListener("keyup", save);
 
 /*
@@ -36,6 +37,7 @@ function save(){
 	var notesEnabled = document.getElementById("notesEnabled").checked;
 	var stashEnabled = document.getElementById("stashEnabled").checked;
 	var cleanupEnabled = document.getElementById("cleanupEnabled").checked;
+	var detailDisabled = document.getElementById("detailDisabled").checked;
 	var dropDowns = document.getElementsByClassName("dropDowns");
 	var dropDownsValues = [];
 	for (var i=0; i<dropDowns.length; ++i){
@@ -48,6 +50,7 @@ function save(){
 	localStorage.setItem("dropDownArraysConfig", JSON.stringify(dropDownsValues));
 	localStorage.setItem("notesConfig", notesEnabled);
 	localStorage.setItem("cleanupConfig", cleanupEnabled);
+	localStorage.setItem("detailConfig", detailDisabled);
 	localStorage.setItem("stashConfig", stashEnabled);
 }
 
@@ -56,6 +59,7 @@ function loadConfig(){
 	var notes = localStorage.getItem("notesConfig");
 	var stash = localStorage.getItem("stashConfig");
 	var cleanup = localStorage.getItem("cleanupConfig");
+	var detail = localStorage.getItem("detailConfig");
 	var dropDowns = JSON.parse(localStorage.getItem("dropDownArraysConfig"));
 
 	document.getElementById("jiraLocation").value = jiraLocation;
@@ -67,6 +71,9 @@ function loadConfig(){
 	}
 	if (cleanup == 'true'){
 		document.getElementById("cleanupEnabled").checked = true;
+	}
+	if (detail == 'true'){
+		document.getElementById("detailDisabled").checked = true;
 	}
 	for (var i = 0; i<dropDowns.length; ++i){
 		var newTextArea = addDropDown();
