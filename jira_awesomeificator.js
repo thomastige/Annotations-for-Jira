@@ -445,7 +445,7 @@ function getDateBlock(){
 			bar = bar.concat("-");
 		}
 		bar = bar.concat("\n");
-		return bar + dateString + bar;
+		return "\n" + bar + dateString + bar;
 }
 
 /*
@@ -471,7 +471,12 @@ function removeDetailView(){
 	var location = window.location.href;
 	if (location.indexOf("RapidBoard.jspa") != -1){
 		document.getElementById("ghx-detail-view").remove();
+		var elements = document.getElementsByClassName("js-issue");
+		for (var i=0; i<elements.length; ++i){
+			elements[i].setAttribute("class", elements[i].getAttribute("class").replace("js-issue", ""));
+		}
 	}
+	
 }
 
 /*
