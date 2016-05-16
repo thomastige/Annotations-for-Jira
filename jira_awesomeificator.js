@@ -11,7 +11,7 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "jiraLocationConfig"
 	jiraLocation = response.data;
 });
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "dropDownArraysConfig"}, function(response) {
-  values = JSON.parse(response.data);
+	values = JSON.parse(response.data);
 });
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "stashConfig"}, function(response) {
 	stashEnabled = response.data;
@@ -293,6 +293,151 @@ function getLocationInStash(key){
 }
 
 /*
+	TO DO LIST
+*/
+
+function createToDoListComponent(){
+	var location = window.location.href;
+	if (location.indexOf("RapidBoard.jspa") != -1){
+		var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
+		if (todos == null){
+			localStorage.setItem("CustomTodoStash", JSON.stringify([]));
+		}
+		
+		var container = document.createElement("div");
+		container.setAttribute("class", "ghx-backlog-container ghx-sprint-active js-sprint-container ghx-open");
+
+		var header = document.createElement("div");
+		header.setAttribute("class", "ghx-backlog-header js-sprint-header");
+		var expander = document.createElement("div");
+		expander.setAttribute("class", "ghx-expander");
+		var expanderIcon = document.createElement("span");
+		expanderIcon.setAttribute("class", "ghx-iconfont aui-icon aui-icon-small aui-iconfont-expanded");
+		
+		var nameDiv = document.createElement("div");
+		nameDiv.setAttribute("class", "ghx-name");
+		var containerLabel = document.createElement("span");
+		containerLabel.setAttribute("class", "field-value ghx-readonly");
+		containerLabel.textContent = "To do";
+
+		var issueListContainer = document.createElement("div");
+		issueListContainer.setAttribute("class", "ghx-meta ghx-disabled");
+
+		expander.appendChild(expanderIcon);
+		header.appendChild(expander);
+		nameDiv.appendChild(containerLabel);
+		header.appendChild(nameDiv);
+		container.appendChild(header);
+		
+		var todoList = document.createElement("div");
+		todoList.setAttribute("id", "todoListDiv")
+		todoList.setAttribute("class", "ghx-issues js-issue-list ghx-has-issues");
+		if (todos != null){
+			for (var i=0; i<todos.length; ++i){
+				todoList.appendChild(createTodoRow(todos[i]));
+			}
+		}
+		todoList.appendChild(createAddTodo());
+		container.appendChild(todoList);
+
+		var contentGroup = document.getElementById("ghx-content-group");
+		contentGroup.insertBefore(container, contentGroup.childNodes[0]);
+	}
+}
+
+function createTodoRow(value){
+	var div = document.createElement("div");
+	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
+	
+	var issueContent = document.createElement("div");
+	issueContent.setAttribute("class", "ghx-issue-content");
+	
+	var row = document.createElement("div");
+	row.setAttribute("class", "ghx-row");
+	
+	var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
+	
+	var summary = document.createElement("div");
+	summary.setAttribute("class", "ghx-summary");
+	var summaryInner = document.createElement("span");
+	summaryInner.setAttribute("class", "ghx-inner");
+	summaryInner.textContent = value;
+	summary.appendChild(summaryInner);
+	row.appendChild(summary);
+	
+	issueContent.appendChild(row);
+	
+	
+	
+	var doneBtn = document.createElement("button");
+	doneBtn.textContent = "Done";
+	doneBtn.addEventListener("click", function(event){
+		console.log(event.target.parentElement.parentElement.parentElement.parentElement)
+		var id = getNodeIndex(event.target.parentElement.parentElement.parentElement.parentElement);
+		var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
+		todos.splice(id, 1);
+		console.log(id)
+		event.target.parentElement.parentElement.parentElement.remove();
+		localStorage.setItem("CustomTodoStash", JSON.stringify(todos));
+	});
+	
+	var endRow = document.createElement("div");
+	endRow.setAttribute("class", "ghx-end ghx-row");
+	var endRowInner = document.createElement("span");
+	endRowInner.setAttribute("class", "ghx-end");
+	endRowInner.appendChild(doneBtn);
+	endRow.appendChild(endRowInner);
+	
+	issueContent.appendChild(endRow)
+	div.appendChild(issueContent);
+	return div
+}
+
+function createAddTodo(){
+	var div = document.createElement("div");
+	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
+	
+	var issueContent = document.createElement("div");
+	issueContent.setAttribute("class", "ghx-issue-content");
+	
+	var row = document.createElement("div");
+	row.setAttribute("class", "ghx-row");
+	
+	var input = document.createElement("input");
+	input.setAttribute("id", "todoInput");
+	input.size = 150;
+	row.appendChild(input);
+	
+	var button = document.createElement("button");
+	button.textContent = "Add";
+	button.addEventListener("click", function(){
+		var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
+		var number = todos.length;
+		var val = document.getElementById("todoInput").value;
+		todos.push(val);
+		var listDiv = document.getElementById("todoListDiv");
+		listDiv.insertBefore(createTodoRow(val), listDiv.childNodes[listDiv.childNodes.length-1]);
+		localStorage.setItem("CustomTodoStash", JSON.stringify(todos));
+		document.getElementById("todoInput").value = "";
+		
+	});
+	row.appendChild(button);
+	
+	issueContent.appendChild(row);
+	//issueContent.appendChild(endRow);
+	div.appendChild(issueContent);
+	return div
+}
+
+
+function getNodeIndex(child){
+	var i = 0;
+	while( (child = child.previousSibling) != null ) 
+		i++;
+	return i;
+}
+
+/*
 	AUTOMATIC COPY PASTE
 */
 
@@ -438,7 +583,7 @@ function getNotePadId(id){
 function getDateBlock(){
 		var date = new Date();
 		var monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE","JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-		var dateString = date.getDate() + " " + monthNames[date.getMonth()]+ " " + date.getFullYear();
+		var dateString = "- " + date.getDate() + " " + monthNames[date.getMonth()]+ " " + date.getFullYear() + " -";
 		var length = dateString.length;
 		var bar = "\n";
 		for (var i=0; i<dateString.length; ++i){
@@ -488,6 +633,7 @@ function triggerCustomization(){
 		if (stashEnabled == 'true'){
 			createStashComponent();
 		}
+		createToDoListComponent();
 		if (detailDisabled == 'true'){
 			removeDetailView();
 		}
