@@ -1,17 +1,35 @@
 /*
+	CONSTANT STRINGS
+*/
+
+const STASH_NOTE_CLASSNAME = "stashNote";
+const SAVEABLE_CLASSNAME = "saveable";
+const CLASS_DROPDOWN = "dropdown";
+const CUSTOM_SELECT_ID = "customSelect";
+const CUSTOM_INPUT_ID = "customInput";
+const NOTEPAD_ID = "notePad";
+const NOTENAME_PREFIX = "JIRANOTE__";
+const NOTENAME_SEPARATOR = "__";
+
+/*
 	CHECK IF RIGHT SITE
 */
 var jiraLocation = '';
 var values = [];
+var downloadMetadataCheckboxes = [];
 var stashEnabled;
 var notesEnabled;
 var cleanupEnabled;
 var detailDisabled;
+var customDataEnabled;
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "jiraLocationConfig"}, function(response) {
 	jiraLocation = response.data;
 });
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "dropDownArraysConfig"}, function(response) {
 	values = JSON.parse(response.data);
+});
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "enabledBoxesConfig"}, function(response) {
+	downloadMetadataCheckboxes = JSON.parse(response.data);
 });
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "stashConfig"}, function(response) {
 	stashEnabled = response.data;
@@ -24,6 +42,9 @@ chrome.runtime.sendMessage({method: "getLocalStorage", key: "cleanupConfig"}, fu
 });
 chrome.runtime.sendMessage({method: "getLocalStorage", key: "detailConfig"}, function(response) {
 	detailDisabled = response.data;
+});
+chrome.runtime.sendMessage({method: "getLocalStorage", key: "customDataConfig"}, function(response) {
+	customDataEnabled = response.data;
 });
 
 /*
@@ -39,14 +60,14 @@ function save(){
 }
 
 function saveStash(){
-	var elements = document.getElementsByClassName("stashNote");
+	var elements = document.getElementsByClassName(STASH_NOTE_CLASSNAME);
 	for (var i=0; i<elements.length; ++i){
 		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
 	}
 }
 
 function saveSaveables(){
-	var elements = document.getElementsByClassName("saveable");
+	var elements = document.getElementsByClassName(SAVEABLE_CLASSNAME);
 	for (var i=0; i<elements.length; ++i){
 		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
 	}
@@ -54,8 +75,8 @@ function saveSaveables(){
 
 function createSelectNode(currId, array){
 	var select = document.createElement("select");
-	select.setAttribute("id", currId + "customSelect" + array);
-	select.setAttribute("class", "saveable");
+	select.setAttribute("id", currId + CUSTOM_SELECT_ID + array);
+	select.setAttribute("class", SAVEABLE_CLASSNAME + " " + CLASS_DROPDOWN);
 	for (var j=0;j<values[array].length;j++){
 		var option = document.createElement('option');
 		option.text = values[array][j];
@@ -68,8 +89,8 @@ function createSelectNode(currId, array){
 
 function createInputNode(currId){
 	var input = document.createElement("input");
-	input.setAttribute("id",currId+ "customInput");
-	input.setAttribute("class", "saveable");
+	input.setAttribute("id",currId+ CUSTOM_INPUT_ID);
+	input.setAttribute("class", SAVEABLE_CLASSNAME);
 	var inputValue = localStorage.getItem(input.getAttribute("id"));
 	if (inputValue != 'undefined'){
 		input.value = inputValue;
@@ -220,8 +241,8 @@ function createIssueRow(issues){
 	var endRowInner = document.createElement("span");
 	endRowInner.setAttribute("class", "ghx-end");
 	var input = document.createElement("input");
-	input.setAttribute("id", "stashNote"+issueKey);
-	input.setAttribute("class", "stashNote");
+	input.setAttribute("id", STASH_NOTE_CLASSNAME+issueKey);
+	input.setAttribute("class", STASH_NOTE_CLASSNAME);
 	input.value = localStorage.getItem(input.getAttribute("id"));
 	input.addEventListener("keyup", save);
 	input.size = 100;
@@ -520,7 +541,7 @@ function createNotePadComponent(currId){
 
 function createNotePad(currId){
 	var notePad = document.createElement("textarea");
-	notePad.setAttribute("class", "saveable");
+	notePad.setAttribute("class", SAVEABLE_CLASSNAME);
 	notePad.setAttribute("id", getNotePadId(currId));
 	var content = localStorage.getItem(notePad.getAttribute("id"));
 	if (content != null){
@@ -538,15 +559,15 @@ function createNotePadSaveButton(currId){
 	btn.textContent = 'download';
 	//TODO: look into FSO to save to a configurable folder on disk, which would then save to $FOLDER/$SPRINT_NUMBER/$TICKET_ID.
 	btn.addEventListener("click", function(event){		
-		var textToWrite = document.getElementById(getNotePadId(event.target.getAttribute("id"))).value;
+		var textToWrite = addAdditionalData() + document.getElementById(getNotePadId(event.target.getAttribute("id"))).value;
 		var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
 		var sprint = document.getElementsByClassName("issueaction-greenhopper-rapidboard-operation js-rapidboard-operation-sprint")[0];
 		if (sprint == null){
-			sprint = "undefined";
+			sprint = "Undefined Sprint";
 		} else {
 			sprint = sprint.textContent;
 		}
-		var fileNameToSaveAs = "JIRANOTE__"+ sprint + "__" + event.target.getAttribute("id") + " - " + document.getElementById("summary-val").textContent;
+		var fileNameToSaveAs = NOTENAME_PREFIX + sprint + NOTENAME_SEPARATOR + event.target.getAttribute("id") + " - " + document.getElementById("summary-val").textContent;
 		
 		var downloadLink = document.createElement("a");
 		downloadLink.download = fileNameToSaveAs;
@@ -563,6 +584,22 @@ function createNotePadSaveButton(currId){
 	return btn;
 }
 
+function addAdditionalData() {
+	var result = "";
+	if (customDataEnabled == 'true'){
+		downloadMetadataCheckboxes;
+		result += "["
+		var elems = document.getElementsByClassName(CLASS_DROPDOWN);
+		for (var i=0; i<downloadMetadataCheckboxes.length; ++i){	
+			var idNumber = downloadMetadataCheckboxes[i];
+			result += NOTENAME_SEPARATOR;
+			result += elems[idNumber].value;
+		}
+		result = result + "__]\n";
+	}
+	return result;
+}
+
 function createAppendDateButton(currId){
 	var btn = document.createElement("button");
 	btn.setAttribute("id", "addDate" + currId);
@@ -577,19 +614,19 @@ function createAppendDateButton(currId){
 }
 
 function getNotePadId(id){
-	return (id + "notePad");
+	return (id + NOTEPAD_ID);
 }
 
 function getDateBlock(){
 		var date = new Date();
 		var monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE","JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-		var dateString = "- " + date.getDate() + " " + monthNames[date.getMonth()]+ " " + date.getFullYear() + " -";
+		var dateString = "| " + date.getDate() + " " + monthNames[date.getMonth()]+ " " + date.getFullYear() + " |";
 		var length = dateString.length;
-		var bar = "\n";
-		for (var i=0; i<dateString.length; ++i){
+		var bar = "\n+";
+		for (var i=1; i<dateString.length-1; ++i){
 			bar = bar.concat("-");
 		}
-		bar = bar.concat("\n");
+		bar = bar.concat("+\n");
 		return "\n" + bar + dateString + bar;
 }
 
@@ -642,3 +679,5 @@ function triggerCustomization(){
 
 /*TODO: find more elegant solution*/
 setTimeout(triggerCustomization, 750);
+
+

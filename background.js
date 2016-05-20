@@ -1,5 +1,5 @@
 /*
-	RURN WHEN ICON IS CLICKED
+	OPEN CONFIG WHEN ICON IS CLICKED
 */
 chrome.browserAction.onClicked.addListener(function(tab) {
     chrome.tabs.create({'url': chrome.extension.getURL('config.html'), 'selected': true});
