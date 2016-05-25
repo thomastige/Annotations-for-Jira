@@ -1,6 +1,6 @@
 /*
-	CONSTANT STRINGS
-*/
+CONSTANT STRINGS
+ */
 
 const STASH_NOTE_CLASSNAME = "stashNote";
 const SAVEABLE_CLASSNAME = "saveable";
@@ -10,142 +10,165 @@ const CUSTOM_INPUT_ID = "customInput";
 const NOTEPAD_ID = "notePad";
 const NOTENAME_PREFIX = "JIRANOTE__";
 const NOTENAME_SEPARATOR = "__";
+const ANNOTATION_SAVE_DATA = "annotationSaveData";
+const CONFIG_SAVE_DATA = "configurationData";
+
+const CONFIG_JIRA_LOCATION = "jiraLocationConfig";
+const CONFIG_DROP_DOWN_VALUES = "dropDownArraysConfig";
+const CONFIG_DROP_DOWN_MAPPINGS = "dropDownMappings";
+const CONFIG_ENABLED_METADATA_BOXES = "enabledBoxesConfig";
+const CONFIG_NOTES_ENABLED = "notesConfig";
+const CONFIG_CLEANUP_ENABLED = "cleanupConfig";
+const CONFIG_DETAILS_PANEL_DISABLED = "detailConfig";
+const CONFIG_CUSTOM_DATA_NOTES = "customDataConfig";
+const CONFIG_STASH_ENABLED = "stashConfig";
+const CONFIG_DD_COLORS_ENABLED = "colorsEnabled";
 
 /*
-	CHECK IF RIGHT SITE
-*/
-var jiraLocation = '';
-var values = [];
-var downloadMetadataCheckboxes = [];
+INITIALIZE SAVE DATA
+ */
+var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
+var annotationSaveData = {};
+if (jsonifiedSaveData != null) {
+	annotationSaveData = JSON.parse(jsonifiedSaveData);
+}
+
+/*
+CHECK IF RIGHT SITE
+ */
+var configurationData = {};
+chrome.runtime.sendMessage({
+	method : "getLocalStorage",
+	key : CONFIG_SAVE_DATA
+}, function (response) {
+	configurationData = JSON.parse(response.data);
+});
+var jiraLocation;
+var values;
+var dropDownMappings;
+var downloadMetadata;
 var stashEnabled;
 var notesEnabled;
 var cleanupEnabled;
 var detailDisabled;
 var customDataEnabled;
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "jiraLocationConfig"}, function(response) {
-	jiraLocation = response.data;
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "dropDownArraysConfig"}, function(response) {
-	values = JSON.parse(response.data);
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "enabledBoxesConfig"}, function(response) {
-	downloadMetadataCheckboxes = JSON.parse(response.data);
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "stashConfig"}, function(response) {
-	stashEnabled = response.data;
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "notesConfig"}, function(response) {
-	notesEnabled = response.data;
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "cleanupConfig"}, function(response) {
-	cleanupEnabled = response.data;
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "detailConfig"}, function(response) {
-	detailDisabled = response.data;
-});
-chrome.runtime.sendMessage({method: "getLocalStorage", key: "customDataConfig"}, function(response) {
-	customDataEnabled = response.data;
-});
+var colorsEnabled;
 
 /*
-	AGILE BOARD COMBOBOXES / NOTE FIELDS
-*/
+AGILE BOARD COMBOBOXES / NOTE FIELDS
+ */
 
-function save(){
-	if (cleanupEnabled == 'true'){
+function save() {
+	if (cleanupEnabled === true) {
 		cleanUpLocalStorage();
 	}
 	saveStash();
 	saveSaveables();
 }
 
-function saveStash(){
+function saveStash() {
 	var elements = document.getElementsByClassName(STASH_NOTE_CLASSNAME);
-	for (var i=0; i<elements.length; ++i){
-		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
+	for (var i = 0; i < elements.length; ++i) {
+		saveAnnotation(elements[i].getAttribute("id"), elements[i].value);
 	}
 }
 
-function saveSaveables(){
+function saveSaveables() {
 	var elements = document.getElementsByClassName(SAVEABLE_CLASSNAME);
-	for (var i=0; i<elements.length; ++i){
-		localStorage.setItem(elements[i].getAttribute("id"), elements[i].value);
+	for (var i = 0; i < elements.length; ++i) {
+		saveAnnotation(elements[i].getAttribute("id"), elements[i].value);
 	}
 }
 
-function createSelectNode(currId, array){
+function createSelectNode(currId, array) {
 	var select = document.createElement("select");
 	select.setAttribute("id", currId + CUSTOM_SELECT_ID + array);
+	select.setAttribute("arrayNumber", array);
 	select.setAttribute("class", SAVEABLE_CLASSNAME + " " + CLASS_DROPDOWN);
-	for (var j=0;j<values[array].length;j++){
+	for (var j = 0; j < values[array].length; j++) {
 		var option = document.createElement('option');
 		option.text = values[array][j];
 		select.add(option, j);
 	}
-	select.value= localStorage.getItem(select.getAttribute("id"));
-	select.addEventListener("click", save);
+	select.value = loadAnnotation(select.getAttribute("id"));
+	if (colorsEnabled === true){
+		var mapping = JSON.parse(dropDownMappings[array]);
+		if (mapping[select.value] != null){
+			select.style.backgroundColor = mapping[select.value];
+		}
+	}
+	select.addEventListener("click", function(){selectNodeClickHandler(event);});
 	return select;
 }
 
-function createInputNode(currId){
+function selectNodeClickHandler(event){
+	if (colorsEnabled === true){
+		var array = event.target.getAttribute("arrayNumber");
+		var map = JSON.parse(dropDownMappings[array]);
+		if (map[event.target.value] != null){
+			event.target.style.backgroundColor = map[event.target.value];
+		}
+	}
+	save();
+}
+
+function createInputNode(currId) {
 	var input = document.createElement("input");
-	input.setAttribute("id",currId+ CUSTOM_INPUT_ID);
+	input.setAttribute("id", currId + CUSTOM_INPUT_ID);
 	input.setAttribute("class", SAVEABLE_CLASSNAME);
-	var inputValue = localStorage.getItem(input.getAttribute("id"));
-	if (inputValue != 'undefined'){
+	var inputValue = loadAnnotation(input.getAttribute("id"));
+	if (inputValue != 'undefined') {
 		input.value = inputValue;
 	}
 	input.addEventListener("keyup", save);
 	return input;
 }
 
-function addComponents(){
+function addComponents() {
 	var location = window.location.href;
-	if (location.indexOf("browse") != -1){
+	if (location.indexOf("browse") != -1) {
 		var currId = document.getElementById("key-val").getAttribute("data-issue-key");
 		document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createCopyPasteButton());
-		if (stashEnabled == 'true'){
-			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createStashButton(getLocationInStash(currId)!=-1));
+		if (stashEnabled === true) {
+			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createStashButton(getLocationInStash(currId) != -1));
 		}
-		for (var counter=0;counter<values.length;counter++){
+		for (var counter = 0; counter < values.length; counter++) {
 			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createSelectNode(currId, counter));
 		}
-		if (notesEnabled == 'true'){
+		if (notesEnabled === true) {
 			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createInputNode(currId));
-		}		
+		}
 		document.getElementById("viewissuesidebar").appendChild(createNotePadComponent(currId));
 		formatBrowse(currId);
-	}
-	else if (location.indexOf("RapidBoard.jspa") != -1){
+	} else if (location.indexOf("RapidBoard.jspa") != -1) {
 		var elements = document.getElementsByClassName("ghx-issue-compact");
-		for (var i=0;i<elements.length; i++){		
-			var curr = elements[i];			
+		for (var i = 0; i < elements.length; i++) {
+			var curr = elements[i];
 			var rightEdge = curr.childNodes[0].childNodes[1];
 			currId = curr.getAttribute("data-issue-key");
-			if (notesEnabled == 'true'){
+			if (notesEnabled === true) {
 				rightEdge.insertBefore(createInputNode(currId), rightEdge.childNodes[0]);
 			}
-			for (var counter=0;counter<values.length;counter++){
+			for (var counter = 0; counter < values.length; counter++) {
 				rightEdge.insertBefore(createSelectNode(currId, counter), rightEdge.childNodes[counter]);
 			}
 			var startRow = curr.childNodes[0].childNodes[0];
 			startRow.insertBefore(createCopyPasteButtonForAgileBoard(currId), curr.childNodes[0].childNodes[0].childNodes[0]);
-			
-			
+
 		}
 	}
 }
 
-function formatBrowse(currId){
+function formatBrowse(currId) {
 	formatNotePad(currId);
 }
 
-function formatNotePad(currId){
+function formatNotePad(currId) {
 	var notePad = document.getElementById(getNotePadId(currId));
-	if (notePad.value != ''){
-		var height = notePad.scrollHeight/15;
+	if (notePad.value != '') {
+		var height = notePad.scrollHeight / 15;
 		var heightUpperbound = 35;
-		if (height > heightUpperbound){
+		if (height > heightUpperbound) {
 			height = heightUpperbound;
 		}
 		notePad.rows = (height);
@@ -153,18 +176,18 @@ function formatNotePad(currId){
 }
 
 /*
-	CREATE BUG STASH
-*/
+CREATE BUG STASH
+ */
 
-function createStashComponent(){
+function createStashComponent() {
 	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1){
-		var issues = JSON.parse(localStorage.getItem("CustomIssueStash"));
-		if (issues == null){
-			localStorage.setItem("CustomIssueStash", JSON.stringify([]));
+	if (location.indexOf("RapidBoard.jspa") != -1) {
+		var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
+		if (issues == null) {
+			saveAnnotation("CustomIssueStash", JSON.stringify([]));
 		}
-		
-		if (issues != null && issues[0] != null){
+
+		if (issues != null && issues[0] != null) {
 			var container = document.createElement("div");
 			container.setAttribute("class", "ghx-backlog-container ghx-sprint-active js-sprint-container ghx-open");
 
@@ -174,7 +197,7 @@ function createStashComponent(){
 			expander.setAttribute("class", "ghx-expander");
 			var expanderIcon = document.createElement("span");
 			expanderIcon.setAttribute("class", "ghx-iconfont aui-icon aui-icon-small aui-iconfont-expanded");
-			
+
 			var nameDiv = document.createElement("div");
 			nameDiv.setAttribute("class", "ghx-name");
 			var containerLabel = document.createElement("span");
@@ -189,11 +212,11 @@ function createStashComponent(){
 			nameDiv.appendChild(containerLabel);
 			header.appendChild(nameDiv);
 			container.appendChild(header);
-			
+
 			var issueList = document.createElement("div");
 			issueList.setAttribute("class", "ghx-issues js-issue-list ghx-has-issues");
-			
-			for (var i=0; i<issues.length; ++i){
+
+			for (var i = 0; i < issues.length; ++i) {
 				issueList.appendChild(createIssueRow(issues[i]));
 			}
 			container.appendChild(issueList);
@@ -204,19 +227,19 @@ function createStashComponent(){
 	}
 }
 
-function createIssueRow(issues){
+function createIssueRow(issues) {
 	var issueKey = issues[0];
 	var issueVal = issues[1];
 	var div = document.createElement("div");
 	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
 	div.setAttribute("data-issue-key", issueKey);
-	
+
 	var issueContent = document.createElement("div");
 	issueContent.setAttribute("class", "ghx-issue-content");
-	
+
 	var row = document.createElement("div");
 	row.setAttribute("class", "ghx-row");
-	
+
 	var key = document.createElement("div");
 	key.setAttribute("class", "ghx-key");
 	var keyContent = document.createElement("a");
@@ -226,7 +249,7 @@ function createIssueRow(issues){
 	keyContent.textContent = issueKey;
 	key.appendChild(keyContent);
 	row.appendChild(key);
-	
+
 	var summary = document.createElement("div");
 	summary.setAttribute("class", "ghx-summary");
 	summary.setAttribute("title", issueVal);
@@ -235,31 +258,31 @@ function createIssueRow(issues){
 	summaryInner.textContent = issueVal;
 	summary.appendChild(summaryInner);
 	row.appendChild(summary);
-	
+
 	var endRow = document.createElement("div");
 	endRow.setAttribute("class", "ghx-end ghx-row");
 	var endRowInner = document.createElement("span");
 	endRowInner.setAttribute("class", "ghx-end");
 	var input = document.createElement("input");
-	input.setAttribute("id", STASH_NOTE_CLASSNAME+issueKey);
+	input.setAttribute("id", STASH_NOTE_CLASSNAME + issueKey);
 	input.setAttribute("class", STASH_NOTE_CLASSNAME);
-	input.value = localStorage.getItem(input.getAttribute("id"));
+	input.value = loadAnnotation(input.getAttribute("id"));
 	input.addEventListener("keyup", save);
 	input.size = 100;
 	endRowInner.appendChild(input);
 	endRow.appendChild(endRowInner);
-	
+
 	issueContent.appendChild(row);
 	issueContent.appendChild(endRow);
 	div.appendChild(issueContent);
 	return div
 }
 
-function createStashButton(inStash = false){
+function createStashButton(inStash = false) {
 	var btn = document.createElement("BUTTON");
 	btn.setAttribute("id", "stashButton");
 	var label = "stash";
-	if(inStash === true){
+	if (inStash === true) {
 		label = "destash";
 	}
 	var text = document.createTextNode(label);
@@ -268,43 +291,43 @@ function createStashButton(inStash = false){
 	return btn;
 }
 
-function stashButtonListener(){
+function stashButtonListener() {
 	var key = document.getElementById("key-val").getAttribute("data-issue-key");
 	var label = document.getElementById("summary-val").textContent;
-	var issues = JSON.parse(localStorage.getItem("CustomIssueStash"));
-	if (issues == null){
+	var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
+	if (issues == null) {
 		issues = [];
 	}
 	var loc = getLocationInStash(key);
-	if (loc>-1){
+	if (loc > -1) {
 		issues.splice(loc, 1);
 	} else {
 		issues.push([key, label]);
 	}
-	localStorage.setItem("CustomIssueStash", JSON.stringify(issues));
+	saveAnnotation("CustomIssueStash", JSON.stringify(issues));
 	toggleButton();
 }
 
-function toggleButton(){
+function toggleButton() {
 	var buttonText = document.getElementById('stashButton').childNodes[0].textContent;
-	if (buttonText == "stash"){
+	if (buttonText == "stash") {
 		document.getElementById("stashButton").childNodes[0].textContent = 'destash';
 	} else {
 		document.getElementById("stashButton").childNodes[0].textContent = 'stash';
 	}
 }
 
-function getLocationInStash(key){
-	var issues = JSON.parse(localStorage.getItem("CustomIssueStash"));
-	if (issues == null){
-		localStorage.setItem("CustomIssueStash", JSON.stringify([]))
+function getLocationInStash(key) {
+	var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
+	if (issues == null) {
+		saveAnnotation("CustomIssueStash", JSON.stringify([]))
 		issues = [];
 	}
 	var location = -1;
-	for (var it = 0; it<issues.length; ++it){
+	for (var it = 0; it < issues.length; ++it) {
 		var curr = issues[it];
-		if (curr != null){
-			if (curr[0] === key){
+		if (curr != null) {
+			if (curr[0] === key) {
 				location = it;
 				break;
 			}
@@ -314,17 +337,17 @@ function getLocationInStash(key){
 }
 
 /*
-	TO DO LIST
-*/
+TO DO LIST
+ */
 
-function createToDoListComponent(){
+function createToDoListComponent() {
 	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1){
-		var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
-		if (todos == null){
-			localStorage.setItem("CustomTodoStash", JSON.stringify([]));
+	if (location.indexOf("RapidBoard.jspa") != -1) {
+		var todos = JSON.parse(loadAnnotation("CustomTodoStash"));
+		if (todos == null) {
+			saveAnnotation("CustomTodoStash", JSON.stringify([]));
 		}
-		
+
 		var container = document.createElement("div");
 		container.setAttribute("class", "ghx-backlog-container ghx-sprint-active js-sprint-container ghx-open");
 
@@ -334,7 +357,7 @@ function createToDoListComponent(){
 		expander.setAttribute("class", "ghx-expander");
 		var expanderIcon = document.createElement("span");
 		expanderIcon.setAttribute("class", "ghx-iconfont aui-icon aui-icon-small aui-iconfont-expanded");
-		
+
 		var nameDiv = document.createElement("div");
 		nameDiv.setAttribute("class", "ghx-name");
 		var containerLabel = document.createElement("span");
@@ -349,12 +372,12 @@ function createToDoListComponent(){
 		nameDiv.appendChild(containerLabel);
 		header.appendChild(nameDiv);
 		container.appendChild(header);
-		
+
 		var todoList = document.createElement("div");
 		todoList.setAttribute("id", "todoListDiv")
 		todoList.setAttribute("class", "ghx-issues js-issue-list ghx-has-issues");
-		if (todos != null){
-			for (var i=0; i<todos.length; ++i){
+		if (todos != null) {
+			for (var i = 0; i < todos.length; ++i) {
 				todoList.appendChild(createTodoRow(todos[i]));
 			}
 		}
@@ -366,18 +389,18 @@ function createToDoListComponent(){
 	}
 }
 
-function createTodoRow(value){
+function createTodoRow(value) {
 	var div = document.createElement("div");
 	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
-	
+
 	var issueContent = document.createElement("div");
 	issueContent.setAttribute("class", "ghx-issue-content");
-	
+
 	var row = document.createElement("div");
 	row.setAttribute("class", "ghx-row");
-	
-	var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
-	
+
+	var todos = JSON.parse(loadAnnotation("CustomTodoStash"));
+
 	var summary = document.createElement("div");
 	summary.setAttribute("class", "ghx-summary");
 	var summaryInner = document.createElement("span");
@@ -385,90 +408,85 @@ function createTodoRow(value){
 	summaryInner.textContent = value;
 	summary.appendChild(summaryInner);
 	row.appendChild(summary);
-	
+
 	issueContent.appendChild(row);
-	
-	
-	
+
 	var doneBtn = document.createElement("button");
 	doneBtn.textContent = "Done";
-	doneBtn.addEventListener("click", function(event){
-		console.log(event.target.parentElement.parentElement.parentElement.parentElement)
+	doneBtn.addEventListener("click", function (event) {
 		var id = getNodeIndex(event.target.parentElement.parentElement.parentElement.parentElement);
-		var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
+		var todos = JSON.parse(loadAnnotation("CustomTodoStash"));
 		todos.splice(id, 1);
-		console.log(id)
 		event.target.parentElement.parentElement.parentElement.remove();
-		localStorage.setItem("CustomTodoStash", JSON.stringify(todos));
+		saveAnnotation("CustomTodoStash", JSON.stringify(todos));
 	});
-	
+
 	var endRow = document.createElement("div");
 	endRow.setAttribute("class", "ghx-end ghx-row");
 	var endRowInner = document.createElement("span");
 	endRowInner.setAttribute("class", "ghx-end");
 	endRowInner.appendChild(doneBtn);
 	endRow.appendChild(endRowInner);
-	
+
 	issueContent.appendChild(endRow)
 	div.appendChild(issueContent);
 	return div
 }
 
-function createAddTodo(){
+function createAddTodo() {
 	var div = document.createElement("div");
 	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
-	
+
 	var issueContent = document.createElement("div");
 	issueContent.setAttribute("class", "ghx-issue-content");
-	
+
 	var row = document.createElement("div");
 	row.setAttribute("class", "ghx-row");
-	
+
 	var input = document.createElement("input");
 	input.setAttribute("id", "todoInput");
 	input.size = 150;
 	row.appendChild(input);
-	
+
 	var button = document.createElement("button");
 	button.textContent = "Add";
-	button.addEventListener("click", function(){
-		var todos = JSON.parse(localStorage.getItem("CustomTodoStash"));
+	button.addEventListener("click", function () {
+		var todos = JSON.parse(loadAnnotation("CustomTodoStash"));
 		var number = todos.length;
 		var val = document.getElementById("todoInput").value;
 		todos.push(val);
 		var listDiv = document.getElementById("todoListDiv");
-		listDiv.insertBefore(createTodoRow(val), listDiv.childNodes[listDiv.childNodes.length-1]);
-		localStorage.setItem("CustomTodoStash", JSON.stringify(todos));
+		listDiv.insertBefore(createTodoRow(val), listDiv.childNodes[listDiv.childNodes.length - 1]);
+		saveAnnotation("CustomTodoStash", JSON.stringify(todos));
 		document.getElementById("todoInput").value = "";
-		
+
 	});
 	row.appendChild(button);
-	
+
 	issueContent.appendChild(row);
 	//issueContent.appendChild(endRow);
 	div.appendChild(issueContent);
 	return div
 }
 
-
-function getNodeIndex(child){
+function getNodeIndex(child) {
 	var i = 0;
-	while( (child = child.previousSibling) != null ) 
+	while ((child = child.previousSibling) != null)
 		i++;
 	return i;
 }
 
 /*
-	AUTOMATIC COPY PASTE
-*/
+COPY BUTTON
+ */
 
-function createCopyPasteButton(){
+function createCopyPasteButton() {
 	var btn = document.createElement("button");
 	btn.setAttribute("id", "copyButton");
 	var label = "copy";
 	var text = document.createTextNode(label);
 	btn.appendChild(text);
-	btn.addEventListener("click", function() {
+	btn.addEventListener("click", function () {
 		var copyFrom = document.createElement("textarea");
 		var key = document.getElementById("key-val").getAttribute("data-issue-key");
 		var label = document.getElementById("summary-val").textContent;
@@ -479,39 +497,43 @@ function createCopyPasteButton(){
 		document.execCommand('copy');
 		body.removeChild(copyFrom);
 		document.getElementById("copyButton").childNodes[0].textContent = 'copied!';
-		setTimeout(function() {document.getElementById("copyButton").childNodes[0].textContent = 'copy';}, 1000);
+		setTimeout(function () {
+			document.getElementById("copyButton").childNodes[0].textContent = 'copy';
+		}, 1000);
 	});
 	return btn;
 }
 
-function createCopyPasteButtonForAgileBoard(currId){
+function createCopyPasteButtonForAgileBoard(currId) {
 	var btn = document.createElement("button");
 	btn.setAttribute("id", "copyButton" + currId);
 	var label = "c";
 	var text = document.createTextNode(label);
 	btn.appendChild(text);
-	btn.addEventListener("click", function(event) {
+	btn.addEventListener("click", function (event) {
 		var copyFrom = document.createElement("textarea");
 		var key = event.target.getAttribute("id").replace("copyButton", '');
 		var label = "";
 		label = event.target.parentNode.childNodes[4].textContent
-		copyFrom.textContent = key + " - " + label;
+			copyFrom.textContent = key + " - " + label;
 		var body = document.getElementsByTagName('body')[0];
 		body.appendChild(copyFrom);
 		copyFrom.select();
 		document.execCommand('copy');
 		body.removeChild(copyFrom);
 		event.target.childNodes[0].textContent = 'copied!';
-		setTimeout(function() {event.target.childNodes[0].textContent = 'c';}, 1000);
+		setTimeout(function () {
+			event.target.childNodes[0].textContent = 'c';
+		}, 1000);
 	});
 	return btn;
 }
 
 /*
-	NOTEPAD COMPONENT
-*/
+NOTEPAD COMPONENT
+ */
 
-function createNotePadComponent(currId){
+function createNotePadComponent(currId) {
 	var toggleWrap = document.createElement("div");
 	toggleWrap.setAttribute("class", "module toggle-wrap");
 	var header = document.createElement("div");
@@ -539,12 +561,12 @@ function createNotePadComponent(currId){
 	return toggleWrap;
 }
 
-function createNotePad(currId){
+function createNotePad(currId) {
 	var notePad = document.createElement("textarea");
 	notePad.setAttribute("class", SAVEABLE_CLASSNAME);
 	notePad.setAttribute("id", getNotePadId(currId));
-	var content = localStorage.getItem(notePad.getAttribute("id"));
-	if (content != null){
+	var content = loadAnnotation(notePad.getAttribute("id"));
+	if (content != null) {
 		notePad.value = content;
 	}
 	notePad.rows = 10;
@@ -553,31 +575,33 @@ function createNotePad(currId){
 	return notePad;
 }
 
-function createNotePadSaveButton(currId){
+function createNotePadSaveButton(currId) {
 	var btn = document.createElement("button");
 	btn.setAttribute("id", currId);
 	btn.textContent = 'download';
 	//TODO: look into FSO to save to a configurable folder on disk, which would then save to $FOLDER/$SPRINT_NUMBER/$TICKET_ID.
-	btn.addEventListener("click", function(event){		
+	btn.addEventListener("click", function (event) {
 		var textToWrite = addAdditionalData() + document.getElementById(getNotePadId(event.target.getAttribute("id"))).value;
-		var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
+		var textFileAsBlob = new Blob([textToWrite], {
+				type : 'text/plain'
+			});
 		var sprint = document.getElementsByClassName("issueaction-greenhopper-rapidboard-operation js-rapidboard-operation-sprint")[0];
-		if (sprint == null){
+		if (sprint == null) {
 			sprint = "Undefined Sprint";
 		} else {
 			sprint = sprint.textContent;
 		}
 		var fileNameToSaveAs = NOTENAME_PREFIX + sprint + NOTENAME_SEPARATOR + event.target.getAttribute("id") + " - " + document.getElementById("summary-val").textContent;
-		
+
 		var downloadLink = document.createElement("a");
 		downloadLink.download = fileNameToSaveAs;
 		downloadLink.innerHTML = "Hidden Link";
-		
+
 		window.URL = window.URL || window.webkitURL;
 		downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
 		downloadLink.style.display = "none";
 		document.body.appendChild(downloadLink);
-		
+
 		downloadLink.click();
 		document.body.removeChild(downloadLink);
 	});
@@ -586,11 +610,11 @@ function createNotePadSaveButton(currId){
 
 function addAdditionalData() {
 	var result = "";
-	if (customDataEnabled == 'true'){
+	if (customDataEnabled == 'true') {
 		downloadMetadataCheckboxes;
 		result += "["
 		var elems = document.getElementsByClassName(CLASS_DROPDOWN);
-		for (var i=0; i<downloadMetadataCheckboxes.length; ++i){	
+		for (var i = 0; i < downloadMetadataCheckboxes.length; ++i) {
 			var idNumber = downloadMetadataCheckboxes[i];
 			result += NOTENAME_SEPARATOR;
 			result += elems[idNumber].value;
@@ -600,11 +624,11 @@ function addAdditionalData() {
 	return result;
 }
 
-function createAppendDateButton(currId){
+function createAppendDateButton(currId) {
 	var btn = document.createElement("button");
 	btn.setAttribute("id", "addDate" + currId);
 	btn.textContent = "Append Date";
-	btn.addEventListener("click", function(event){
+	btn.addEventListener("click", function (event) {
 		var id = event.target.getAttribute("id");
 		id = id.replace("addDate", '');
 		var notePad = document.getElementById(getNotePadId(currId));
@@ -613,65 +637,94 @@ function createAppendDateButton(currId){
 	return btn;
 }
 
-function getNotePadId(id){
+function getNotePadId(id) {
 	return (id + NOTEPAD_ID);
 }
 
-function getDateBlock(){
-		var date = new Date();
-		var monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE","JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-		var dateString = "| " + date.getDate() + " " + monthNames[date.getMonth()]+ " " + date.getFullYear() + " |";
-		var length = dateString.length;
-		var bar = "\n+";
-		for (var i=1; i<dateString.length-1; ++i){
-			bar = bar.concat("-");
-		}
-		bar = bar.concat("+\n");
-		return "\n" + bar + dateString + bar;
+function getDateBlock() {
+	var date = new Date();
+	var monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+	var dateString = "| " + date.getDate() + " " + monthNames[date.getMonth()] + " " + date.getFullYear() + " |";
+	var length = dateString.length;
+	var bar = "\n+";
+	for (var i = 1; i < dateString.length - 1; ++i) {
+		bar = bar.concat("-");
+	}
+	bar = bar.concat("+\n");
+	return "\n" + bar + dateString + bar;
 }
 
 /*
-	LOCALSTORAGE CLEAN UP
-*/
+LOCALSTORAGE CLEAN UP
+ */
 
-function cleanUpLocalStorage(){
+function cleanUpLocalStorage() {
 	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1){
-		for(var key in localStorage){
-			if (key.indexOf('customInput') != -1 || key.indexOf('customSelect') != -1 || key.indexOf('stashNote') != -1){
-				localStorage.removeItem(key);
+	if (location.indexOf("RapidBoard.jspa") != -1) {
+		var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
+		for (var key in annotationSaveData) {
+			if (key.indexOf('customInput') != -1 || key.indexOf('customSelect') != -1 || key.indexOf('stashNote') != -1) {
+				delete annotationSaveData[key];
 			}
 		}
+		localStorage.setItem(ANNOTATION_SAVE_DATA, JSON.stringify(annotationSaveData));
 	}
 }
 
 /*
-	REMOVE DETAIL VIEW
-*/
+REMOVE DETAIL VIEW
+ */
 
-function removeDetailView(){
+function removeDetailView() {
 	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1){
+	if (location.indexOf("RapidBoard.jspa") != -1) {
 		document.getElementById("ghx-detail-view").remove();
 		var elements = document.getElementsByClassName("js-issue");
-		for (var i=0; i<elements.length; ++i){
+		for (var i = 0; i < elements.length; ++i) {
 			elements[i].setAttribute("class", elements[i].getAttribute("class").replace("js-issue", ""));
 		}
 	}
-	
+
 }
 
 /*
-	DRIVER FUNCTION
-*/
-function triggerCustomization(){
-	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1){		
+SAVE AND LOAD DATA
+ */
+
+function saveAnnotation(key, value) {
+	var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
+	annotationSaveData[key] = value;
+	localStorage.setItem(ANNOTATION_SAVE_DATA, JSON.stringify(annotationSaveData));
+}
+
+function loadAnnotation(key) {
+	var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
+	var retVal;
+	retVal = annotationSaveData[key];
+	return retVal;
+}
+
+/*
+DRIVER FUNCTION
+ */
+function triggerCustomization() {
+	jiraLocation = configurationData[CONFIG_JIRA_LOCATION];
+	values = JSON.parse(configurationData[CONFIG_DROP_DOWN_VALUES]);
+	downloadMetadataCheckboxes = JSON.parse(configurationData[CONFIG_ENABLED_METADATA_BOXES]);
+	stashEnabled = configurationData[CONFIG_STASH_ENABLED];
+	notesEnabled = configurationData[CONFIG_NOTES_ENABLED];
+	cleanupEnabled = configurationData[CONFIG_CLEANUP_ENABLED];
+	detailDisabled = configurationData[CONFIG_DETAILS_PANEL_DISABLED];
+	colorsEnabled = configurationData[CONFIG_DD_COLORS_ENABLED];
+	customDataEnabled = configurationData[CONFIG_CUSTOM_DATA_NOTES];
+	dropDownMappings = JSON.parse(configurationData[CONFIG_DROP_DOWN_MAPPINGS]);
+	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1) {
 		addComponents();
-		if (stashEnabled == 'true'){
+		if (stashEnabled === true) {
 			createStashComponent();
 		}
 		createToDoListComponent();
-		if (detailDisabled == 'true'){
+		if (detailDisabled === true) {
 			removeDetailView();
 		}
 	}
@@ -679,5 +732,3 @@ function triggerCustomization(){
 
 /*TODO: find more elegant solution*/
 setTimeout(triggerCustomization, 750);
-
-
