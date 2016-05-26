@@ -9,8 +9,10 @@ document.getElementById("notesEnabled").addEventListener("click", save);
 document.getElementById("cleanupEnabled").addEventListener("click", save);
 document.getElementById("detailDisabled").addEventListener("click", save);
 document.getElementById("colorsEnabled").addEventListener("click", save);
+document.getElementById("textSaveMode").addEventListener("click", save);
 document.getElementById("customDataEnabled").addEventListener("click", saveAndReload);
 document.getElementById("jiraLocation").addEventListener("keyup", save);
+document.getElementById("triggerDelay").addEventListener("keyup", save);
 
 /*
 INITIAL LOAD -- SET DEFAULT VALUES
@@ -21,7 +23,9 @@ if (localStorage.getItem("initialized") != 'true') {
 		"dropDownArraysConfig" : JSON.stringify(initialArray),
 		"notesConfig" : true,
 		"cleanupConfig" : true,
-		"stashConfig" : true
+		"stashConfig" : true,
+		"textSaveMode" : "keyup",
+		"triggerDelay" : "750"
 	};
 	localStorage.setItem(CONFIG_SAVE_DATA, JSON.stringify(saveData));
 
@@ -62,6 +66,7 @@ function addDropDown() {
 
 function save() {
 	var jiraLocation = document.getElementById("jiraLocation").value;
+	var triggerDelay = document.getElementById("triggerDelay").value;
 	var notesEnabled = document.getElementById("notesEnabled").checked;
 	var stashEnabled = document.getElementById("stashEnabled").checked;
 	var cleanupEnabled = document.getElementById("cleanupEnabled").checked;
@@ -69,6 +74,7 @@ function save() {
 	var customDataEnabled = document.getElementById("customDataEnabled").checked;
 	var colorsEnabled = document.getElementById("colorsEnabled").checked;
 	var dropDowns = document.getElementsByClassName("dropDowns");
+	var textSaveMode = document.getElementById("textSaveMode").value;
 	var dropDownsValues = [];
 	var colorMappings = {};
 	for (var i = 0; i < dropDowns.length; ++i) {
@@ -111,6 +117,7 @@ function save() {
 	} 
 	saveData = {
 		"jiraLocationConfig" : jiraLocation,
+		"triggerDelay" : triggerDelay,
 		"dropDownArraysConfig" : JSON.stringify(dropDownsValues),
 		"dropDownMappings" : JSON.stringify(colorMappings),
 		"enabledBoxesConfig" : JSON.stringify(enabledBoxes),
@@ -119,7 +126,8 @@ function save() {
 		"detailConfig" : detailDisabled,
 		"customDataConfig" : customDataEnabled,
 		"colorsEnabled" : colorsEnabled,
-		"stashConfig" : stashEnabled
+		"stashConfig" : stashEnabled,
+		"textSaveMode" : textSaveMode
 	};
 	localStorage.setItem(CONFIG_SAVE_DATA, JSON.stringify(saveData));
 }
@@ -132,8 +140,9 @@ function saveAndReload() {
 
 function loadConfig() {
 	var data = JSON.parse(localStorage.getItem(CONFIG_SAVE_DATA));
-	console.log(data);
 	var jiraLocation = data["jiraLocationConfig"];
+	var textSaveMode = data["textSaveMode"];
+	var triggerDelay = data["triggerDelay"];
 	var notes = data["notesConfig"];
 	var stash = data["stashConfig"];
 	var cleanup = data["cleanupConfig"];
@@ -145,6 +154,8 @@ function loadConfig() {
 	var enabledBoxes = JSON.parse(data["enabledBoxesConfig"]);
 
 	document.getElementById("jiraLocation").value = jiraLocation;
+	document.getElementById("triggerDelay").value = triggerDelay;
+	document.getElementById("textSaveMode").value = textSaveMode;
 	if (notes === true) {
 		document.getElementById("notesEnabled").checked = true;
 	}
@@ -179,7 +190,6 @@ function loadConfig() {
 			newTextArea.value = content;
 		}
 	}
-	console.log(enabledBoxes);
 	if (enabledBoxes != null) {
 		for (var i = 0; i < enabledBoxes.length; ++i) {
 			document.getElementById("checkbox" + enabledBoxes[i]).checked = true;

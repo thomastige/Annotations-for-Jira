@@ -23,6 +23,22 @@ const CONFIG_DETAILS_PANEL_DISABLED = "detailConfig";
 const CONFIG_CUSTOM_DATA_NOTES = "customDataConfig";
 const CONFIG_STASH_ENABLED = "stashConfig";
 const CONFIG_DD_COLORS_ENABLED = "colorsEnabled";
+const CONFIG_TEXT_SAVE_MODE = "textSaveMode";
+
+// Variables. Some of them need default values.
+var configurationData = {};
+var triggerDelay;
+var jiraLocation;
+var values;
+var dropDownMappings;
+var downloadMetadata;
+var stashEnabled;
+var notesEnabled;
+var cleanupEnabled;
+var detailDisabled;
+var customDataEnabled;
+var colorsEnabled;
+var textSaveMode = "keyup";
 
 /*
 INITIALIZE SAVE DATA
@@ -36,25 +52,33 @@ if (jsonifiedSaveData != null) {
 }
 
 /*
-CHECK IF RIGHT SITE
+DEFINE VARIABLES AND EXECUTE
  */
-var configurationData = {};
+
 chrome.runtime.sendMessage({
 	method : "getLocalStorage",
 	key : CONFIG_SAVE_DATA
 }, function (response) {
 	configurationData = JSON.parse(response.data);
+	triggerDelay = configurationData["triggerDelay"];
+
+	// -- BEGIN VARIABLES --
+
+	jiraLocation = configurationData[CONFIG_JIRA_LOCATION];
+	values = JSON.parse(configurationData[CONFIG_DROP_DOWN_VALUES]);
+	downloadMetadataCheckboxes = JSON.parse(configurationData[CONFIG_ENABLED_METADATA_BOXES]);
+	stashEnabled = configurationData[CONFIG_STASH_ENABLED];
+	notesEnabled = configurationData[CONFIG_NOTES_ENABLED];
+	cleanupEnabled = configurationData[CONFIG_CLEANUP_ENABLED];
+	detailDisabled = configurationData[CONFIG_DETAILS_PANEL_DISABLED];
+	colorsEnabled = configurationData[CONFIG_DD_COLORS_ENABLED];
+	customDataEnabled = configurationData[CONFIG_CUSTOM_DATA_NOTES];
+	textSaveMode = configurationData[CONFIG_TEXT_SAVE_MODE];
+	dropDownMappings = JSON.parse(configurationData[CONFIG_DROP_DOWN_MAPPINGS]);
+
+	// -- END VARIABLES -- Trigger customizations
+	setTimeout(triggerCustomization, triggerDelay);
 });
-var jiraLocation;
-var values;
-var dropDownMappings;
-var downloadMetadata;
-var stashEnabled;
-var notesEnabled;
-var cleanupEnabled;
-var detailDisabled;
-var customDataEnabled;
-var colorsEnabled;
 
 /*
 AGILE BOARD COMBOBOXES / NOTE FIELDS
@@ -93,21 +117,23 @@ function createSelectNode(currId, array) {
 		select.add(option, j);
 	}
 	select.value = loadAnnotation(select.getAttribute("id"));
-	if (colorsEnabled === true){
+	if (colorsEnabled === true) {
 		var mapping = JSON.parse(dropDownMappings[array]);
-		if (mapping[select.value] != null){
+		if (mapping[select.value] != null) {
 			select.style.backgroundColor = mapping[select.value];
 		}
 	}
-	select.addEventListener("click", function(){selectNodeClickHandler(event);});
+	select.addEventListener("click", function () {
+		selectNodeClickHandler(event);
+	});
 	return select;
 }
 
-function selectNodeClickHandler(event){
-	if (colorsEnabled === true){
+function selectNodeClickHandler(event) {
+	if (colorsEnabled === true) {
 		var array = event.target.getAttribute("arrayNumber");
 		var map = JSON.parse(dropDownMappings[array]);
-		if (map[event.target.value] != null){
+		if (map[event.target.value] != null) {
 			event.target.style.backgroundColor = map[event.target.value];
 		}
 	}
@@ -119,10 +145,10 @@ function createInputNode(currId) {
 	input.setAttribute("id", currId + CUSTOM_INPUT_ID);
 	input.setAttribute("class", SAVEABLE_CLASSNAME);
 	var inputValue = loadAnnotation(input.getAttribute("id"));
-	if (inputValue != 'undefined') {
+	if (inputValue != null) {
 		input.value = inputValue;
 	}
-	input.addEventListener("keyup", save);
+	input.addEventListener(textSaveMode, save);
 	return input;
 }
 
@@ -233,7 +259,7 @@ function createIssueRow(issues) {
 	var issueKey = issues[0];
 	var issueVal = issues[1];
 	var div = document.createElement("div");
-	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
+	div.setAttribute("class", "ghx-issue-compact ghx-type-52");
 	div.setAttribute("data-issue-key", issueKey);
 
 	var issueContent = document.createElement("div");
@@ -268,8 +294,11 @@ function createIssueRow(issues) {
 	var input = document.createElement("input");
 	input.setAttribute("id", STASH_NOTE_CLASSNAME + issueKey);
 	input.setAttribute("class", STASH_NOTE_CLASSNAME);
-	input.value = loadAnnotation(input.getAttribute("id"));
-	input.addEventListener("keyup", save);
+	var inputValue = loadAnnotation(input.getAttribute("id"));
+	if (inputValue != null) {
+		input.value = inputValue;
+	}
+	input.addEventListener(textSaveMode, save);
 	input.size = 100;
 	endRowInner.appendChild(input);
 	endRow.appendChild(endRowInner);
@@ -393,7 +422,7 @@ function createToDoListComponent() {
 
 function createTodoRow(value) {
 	var div = document.createElement("div");
-	div.setAttribute("class", "js-issue ghx-issue-compact ghx-type-52");
+	div.setAttribute("class", "ghx-issue-compact ghx-type-52");
 
 	var issueContent = document.createElement("div");
 	issueContent.setAttribute("class", "ghx-issue-content");
@@ -573,7 +602,7 @@ function createNotePad(currId) {
 	}
 	notePad.rows = 10;
 	notePad.cols = 70;
-	notePad.addEventListener("keyup", save);
+	notePad.addEventListener(textSaveMode, save);
 	return notePad;
 }
 
@@ -681,12 +710,7 @@ function removeDetailView() {
 	var location = window.location.href;
 	if (location.indexOf("RapidBoard.jspa") != -1) {
 		document.getElementById("ghx-detail-view").remove();
-		var elements = document.getElementsByClassName("js-issue");
-		for (var i = 0; i < elements.length; ++i) {
-			elements[i].setAttribute("class", elements[i].getAttribute("class").replace("js-issue", ""));
-		}
 	}
-
 }
 
 /*
@@ -710,16 +734,7 @@ function loadAnnotation(key) {
 DRIVER FUNCTION
  */
 function triggerCustomization() {
-	jiraLocation = configurationData[CONFIG_JIRA_LOCATION];
-	values = JSON.parse(configurationData[CONFIG_DROP_DOWN_VALUES]);
-	downloadMetadataCheckboxes = JSON.parse(configurationData[CONFIG_ENABLED_METADATA_BOXES]);
-	stashEnabled = configurationData[CONFIG_STASH_ENABLED];
-	notesEnabled = configurationData[CONFIG_NOTES_ENABLED];
-	cleanupEnabled = configurationData[CONFIG_CLEANUP_ENABLED];
-	detailDisabled = configurationData[CONFIG_DETAILS_PANEL_DISABLED];
-	colorsEnabled = configurationData[CONFIG_DD_COLORS_ENABLED];
-	customDataEnabled = configurationData[CONFIG_CUSTOM_DATA_NOTES];
-	dropDownMappings = JSON.parse(configurationData[CONFIG_DROP_DOWN_MAPPINGS]);
+
 	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1) {
 		addComponents();
 		if (stashEnabled === true) {
@@ -731,6 +746,3 @@ function triggerCustomization() {
 		}
 	}
 }
-
-/*TODO: find more elegant solution*/
-setTimeout(triggerCustomization, 750);
