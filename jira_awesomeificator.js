@@ -31,6 +31,8 @@ var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
 var annotationSaveData = {};
 if (jsonifiedSaveData != null) {
 	annotationSaveData = JSON.parse(jsonifiedSaveData);
+} else {
+	localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
 }
 
 /*
