@@ -25,6 +25,10 @@ const CONFIG_STASH_ENABLED = "stashConfig";
 const CONFIG_DD_COLORS_ENABLED = "colorsEnabled";
 const CONFIG_TEXT_SAVE_MODE = "textSaveMode";
 
+const DEFAULT_DROPDOWN_COLOR = "white";
+const DEFAULT_ROW_COLOR = "white";
+const DEFAULT_FONT_COLOR = "#333";
+
 // Variables. Some of them need default values.
 var configurationData = {};
 var triggerDelay;
@@ -117,12 +121,7 @@ function createSelectNode(currId, array) {
 		select.add(option, j);
 	}
 	select.value = loadAnnotation(select.getAttribute("id"));
-	if (colorsEnabled === true) {
-		var mapping = JSON.parse(dropDownMappings[array]);
-		if (mapping[select.value] != null) {
-			select.style.backgroundColor = mapping[select.value];
-		}
-	}
+	//applyColorMappings(select, array);
 	select.addEventListener("click", function () {
 		selectNodeClickHandler(event);
 	});
@@ -130,13 +129,8 @@ function createSelectNode(currId, array) {
 }
 
 function selectNodeClickHandler(event) {
-	if (colorsEnabled === true) {
-		var array = event.target.getAttribute("arrayNumber");
-		var map = JSON.parse(dropDownMappings[array]);
-		if (map[event.target.value] != null) {
-			event.target.style.backgroundColor = map[event.target.value];
-		}
-	}
+	var array = event.target.getAttribute("arrayNumber");
+	applyColorMappings(event.target, array);
 	save();
 }
 
@@ -161,7 +155,9 @@ function addComponents() {
 			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createStashButton(getLocationInStash(currId) != -1));
 		}
 		for (var counter = 0; counter < values.length; counter++) {
-			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createSelectNode(currId, counter));
+			var node = createSelectNode(currId, counter);
+			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(node);
+			applyColorMappings(node, counter);
 		}
 		if (notesEnabled === true) {
 			document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createInputNode(currId));
@@ -178,7 +174,9 @@ function addComponents() {
 				rightEdge.insertBefore(createInputNode(currId), rightEdge.childNodes[0]);
 			}
 			for (var counter = 0; counter < values.length; counter++) {
+				var node = createSelectNode(currId, counter);
 				rightEdge.insertBefore(createSelectNode(currId, counter), rightEdge.childNodes[counter]);
+				applyColorMappings(node, counter);
 			}
 			var startRow = curr.childNodes[0].childNodes[0];
 			startRow.insertBefore(createCopyPasteButtonForAgileBoard(currId), curr.childNodes[0].childNodes[0].childNodes[0]);
@@ -210,10 +208,14 @@ CREATE BUG STASH
 function createStashComponent() {
 	var location = window.location.href;
 	if (location.indexOf("RapidBoard.jspa") != -1) {
-		var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
-		if (issues == null) {
-			saveAnnotation("CustomIssueStash", JSON.stringify([]));
+		var storedStash = loadAnnotation("CustomIssueStash");
+		if (storedStash == null) {
+			var emptyArray = JSON.stringify([]);
+			saveAnnotation("CustomIssueStash", emptyArray);
+			storedStash = emptyArray;
+
 		}
+		var issues = JSON.parse(storedStash);
 
 		if (issues != null && issues[0] != null) {
 			var container = document.createElement("div");
@@ -374,10 +376,13 @@ TO DO LIST
 function createToDoListComponent() {
 	var location = window.location.href;
 	if (location.indexOf("RapidBoard.jspa") != -1) {
-		var todos = JSON.parse(loadAnnotation("CustomTodoStash"));
-		if (todos == null) {
-			saveAnnotation("CustomTodoStash", JSON.stringify([]));
+		var storedTodos = loadAnnotation("CustomTodoStash");
+		if (storedTodos == null) {
+			var emptyArray = JSON.stringify([]);
+			saveAnnotation("CustomTodoStash", emptyArray);
+			storedTodos = emptyArray;
 		}
+		var todos = JSON.parse(storedTodos);
 
 		var container = document.createElement("div");
 		container.setAttribute("class", "ghx-backlog-container ghx-sprint-active js-sprint-container ghx-open");
@@ -728,6 +733,51 @@ function loadAnnotation(key) {
 	var retVal;
 	retVal = annotationSaveData[key];
 	return retVal;
+}
+
+/*
+APPLY COLOR MAPPINGS
+ */
+
+function applyColorMappings(element, array) {
+	element = document.getElementById(element.id);
+	if (colorsEnabled === true) {
+		var map = JSON.parse(dropDownMappings[array]);
+		if (element.value != null && map[element.value] != null) {
+			/*
+			var background = element.style.backgroundColor;
+			var row = element.parentNode.parentNode.style.backgroundColor;
+			var text = element.parentNode.parentNode.style.color;
+			 */
+			var background = DEFAULT_DROPDOWN_COLOR;
+			var row = DEFAULT_ROW_COLOR;
+			var text = DEFAULT_FONT_COLOR;
+			var mappingArray = map[element.value].split(";");
+			for (var i = 0; i < mappingArray.length; ++i) {
+				var mapping = mappingArray[i];
+				var splitMapping = mapping.split(":");
+
+				if (splitMapping.length == 2) {
+					var component = splitMapping[0];
+					var value = splitMapping[1];
+					if (component === "dropdown") {
+						background = value;
+					} else if (component === "row") {
+						var id = element.id;
+						row = value;
+					} else if (component === "text") {
+						var id = element.id;
+						text = value;
+					}
+				} else {
+					background = splitMapping[0];
+				}
+			}
+			element.style.backgroundColor = background;
+			element.parentNode.parentNode.style.backgroundColor = row;
+			element.parentNode.parentNode.style.color = text;
+		}
+	}
 }
 
 /*
