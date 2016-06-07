@@ -9,6 +9,7 @@ document.getElementById("notesEnabled").addEventListener("click", save);
 document.getElementById("cleanupEnabled").addEventListener("click", save);
 document.getElementById("detailDisabled").addEventListener("click", save);
 document.getElementById("colorsEnabled").addEventListener("click", save);
+document.getElementById("watcherBlur").addEventListener("click", save);
 document.getElementById("textSaveMode").addEventListener("click", save);
 document.getElementById("customDataEnabled").addEventListener("click", saveAndReload);
 document.getElementById("jiraLocation").addEventListener("keyup", save);
@@ -73,6 +74,7 @@ function save() {
 	var detailDisabled = document.getElementById("detailDisabled").checked;
 	var customDataEnabled = document.getElementById("customDataEnabled").checked;
 	var colorsEnabled = document.getElementById("colorsEnabled").checked;
+	var watcherBlur = document.getElementById("watcherBlur").checked;
 	var dropDowns = document.getElementsByClassName("dropDowns");
 	var textSaveMode = document.getElementById("textSaveMode").value;
 	var dropDownsValues = [];
@@ -126,6 +128,7 @@ function save() {
 		"detailConfig" : detailDisabled,
 		"customDataConfig" : customDataEnabled,
 		"colorsEnabled" : colorsEnabled,
+		"watcherBlur" : watcherBlur,
 		"stashConfig" : stashEnabled,
 		"textSaveMode" : textSaveMode
 	};
@@ -148,6 +151,7 @@ function loadConfig() {
 	var cleanup = data["cleanupConfig"];
 	var detail = data["detailConfig"];
 	var colorsEnabled = data["colorsEnabled"];
+	var watcherBlur = data["watcherBlur"];
 	var customData = data["customDataConfig"];
 	var dropDowns = JSON.parse(data["dropDownArraysConfig"]);
 	var mappings = JSON.parse(data["dropDownMappings"]);
@@ -170,6 +174,9 @@ function loadConfig() {
 	}
 	if (colorsEnabled === true) {
 		document.getElementById("colorsEnabled").checked = true;
+	}
+	if (watcherBlur === true) {
+		document.getElementById("watcherBlur").checked = true;
 	}
 	if (customData === true) {
 		document.getElementById("customDataEnabled").checked = true;

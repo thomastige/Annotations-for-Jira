@@ -1,4 +1,9 @@
 /*
+IMPORT
+ */
+
+
+/*
 CONSTANT STRINGS
  */
 
@@ -24,6 +29,7 @@ const CONFIG_CUSTOM_DATA_NOTES = "customDataConfig";
 const CONFIG_STASH_ENABLED = "stashConfig";
 const CONFIG_DD_COLORS_ENABLED = "colorsEnabled";
 const CONFIG_TEXT_SAVE_MODE = "textSaveMode";
+const CONFIG_WATCHER_BLUR = "watcherBlur";
 
 const DEFAULT_DROPDOWN_COLOR = "white";
 const DEFAULT_ROW_COLOR = "white";
@@ -42,47 +48,13 @@ var cleanupEnabled;
 var detailDisabled;
 var customDataEnabled;
 var colorsEnabled;
+var watcherBlur;
 var textSaveMode = "keyup";
 
 /*
 INITIALIZE SAVE DATA
  */
-var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
 var annotationSaveData = {};
-if (jsonifiedSaveData != null) {
-	annotationSaveData = JSON.parse(jsonifiedSaveData);
-} else {
-	localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
-}
-
-/*
-DEFINE VARIABLES AND EXECUTE
- */
-
-chrome.runtime.sendMessage({
-	method : "getLocalStorage",
-	key : CONFIG_SAVE_DATA
-}, function (response) {
-	configurationData = JSON.parse(response.data);
-	triggerDelay = configurationData["triggerDelay"];
-
-	// -- BEGIN VARIABLES --
-
-	jiraLocation = configurationData[CONFIG_JIRA_LOCATION];
-	values = JSON.parse(configurationData[CONFIG_DROP_DOWN_VALUES]);
-	downloadMetadataCheckboxes = JSON.parse(configurationData[CONFIG_ENABLED_METADATA_BOXES]);
-	stashEnabled = configurationData[CONFIG_STASH_ENABLED];
-	notesEnabled = configurationData[CONFIG_NOTES_ENABLED];
-	cleanupEnabled = configurationData[CONFIG_CLEANUP_ENABLED];
-	detailDisabled = configurationData[CONFIG_DETAILS_PANEL_DISABLED];
-	colorsEnabled = configurationData[CONFIG_DD_COLORS_ENABLED];
-	customDataEnabled = configurationData[CONFIG_CUSTOM_DATA_NOTES];
-	textSaveMode = configurationData[CONFIG_TEXT_SAVE_MODE];
-	dropDownMappings = JSON.parse(configurationData[CONFIG_DROP_DOWN_MAPPINGS]);
-
-	// -- END VARIABLES -- Trigger customizations
-	setTimeout(triggerCustomization, triggerDelay);
-});
 
 /*
 AGILE BOARD COMBOBOXES / NOTE FIELDS
@@ -147,8 +119,7 @@ function createInputNode(currId) {
 }
 
 function addComponents() {
-	var location = window.location.href;
-	if (location.indexOf("browse") != -1) {
+	if (isBugScreen()) {
 		var currId = document.getElementById("key-val").getAttribute("data-issue-key");
 		document.getElementsByClassName("aui-nav-breadcrumbs")[0].appendChild(createCopyPasteButton());
 		if (stashEnabled === true) {
@@ -164,7 +135,7 @@ function addComponents() {
 		}
 		document.getElementById("viewissuesidebar").appendChild(createNotePadComponent(currId));
 		formatBrowse(currId);
-	} else if (location.indexOf("RapidBoard.jspa") != -1) {
+	} else if (isRapidBoardScreen()) {
 		var elements = document.getElementsByClassName("ghx-issue-compact");
 		for (var i = 0; i < elements.length; i++) {
 			var curr = elements[i];
@@ -206,8 +177,7 @@ CREATE BUG STASH
  */
 
 function createStashComponent() {
-	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1) {
+	if (isRapidBoardScreen()) {
 		var storedStash = loadAnnotation("CustomIssueStash");
 		if (storedStash == null) {
 			var emptyArray = JSON.stringify([]);
@@ -304,11 +274,31 @@ function createIssueRow(issues) {
 	input.size = 100;
 	endRowInner.appendChild(input);
 	endRow.appendChild(endRowInner);
+	var removeBtn = document.createElement("button");
+	removeBtn.setAttribute("key", issueKey);
+	removeBtn.textContent = "x";
+	removeBtn.addEventListener("click", function () {
+		removeElementFromStash(event.target.getAttribute("key"));
+		event.target.parentNode.parentNode.parentNode.remove();
+	});
+	endRow.appendChild(removeBtn);
 
 	issueContent.appendChild(row);
 	issueContent.appendChild(endRow);
 	div.appendChild(issueContent);
 	return div
+}
+
+function removeElementFromStash(key) {
+	var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
+	if (issues == null) {
+		issues = [];
+	}
+	var loc = getLocationInStash(key);
+	if (loc > -1) {
+		issues.splice(loc, 1);
+	}
+	saveAnnotation("CustomIssueStash", JSON.stringify(issues));
 }
 
 function createStashButton(inStash = false) {
@@ -374,8 +364,7 @@ TO DO LIST
  */
 
 function createToDoListComponent() {
-	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1) {
+	if (isRapidBoardScreen()) {
 		var storedTodos = loadAnnotation("CustomTodoStash");
 		if (storedTodos == null) {
 			var emptyArray = JSON.stringify([]);
@@ -646,7 +635,7 @@ function createNotePadSaveButton(currId) {
 
 function addAdditionalData() {
 	var result = "";
-	if (customDataEnabled == 'true') {
+	if (customDataEnabled) {
 		downloadMetadataCheckboxes;
 		result += "["
 		var elems = document.getElementsByClassName(CLASS_DROPDOWN);
@@ -687,7 +676,7 @@ function getDateBlock() {
 		bar = bar.concat("-");
 	}
 	bar = bar.concat("+\n");
-	return "\n" + bar + dateString + bar;
+	return bar + dateString + bar;
 }
 
 /*
@@ -695,8 +684,7 @@ LOCALSTORAGE CLEAN UP
  */
 
 function cleanUpLocalStorage() {
-	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1) {
+	if (isRapidBoardScreen()) {
 		var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
 		for (var key in annotationSaveData) {
 			if (key.indexOf('customInput') != -1 || key.indexOf('customSelect') != -1 || key.indexOf('stashNote') != -1) {
@@ -712,8 +700,8 @@ REMOVE DETAIL VIEW
  */
 
 function removeDetailView() {
-	var location = window.location.href;
-	if (location.indexOf("RapidBoard.jspa") != -1) {
+
+	if (isRapidBoardScreen()) {
 		document.getElementById("ghx-detail-view").remove();
 	}
 }
@@ -781,11 +769,46 @@ function applyColorMappings(element, array) {
 }
 
 /*
+REMOVE BLUR FOR WATCHER LIST
+ */
+function removeBlurFromWatcherList() {
+	if (isBugScreen()) {
+		document.getElementById("view-watcher-list").addEventListener("click", function () {
+			setTimeout(function () {
+				document.getElementById("inline-dialog-watchers").style.cssText = document.getElementById("inline-dialog-watchers").style.cssText.replace(" translateZ(0px)", "");
+			}, 100);
+		});
+	}
+}
+
+/*
+UTILITY FUNCTIONS TO DETERMINE SCREEN
+ */
+function isRapidBoardScreen() {
+	var location = window.location.href;
+	return (location.indexOf("RapidBoard.jspa") != -1);
+}
+
+function isBugScreen() {
+	var location = window.location.href;
+	return (location.indexOf("browse") != -1);
+}
+
+
+/*
 DRIVER FUNCTION
  */
 function triggerCustomization() {
 
 	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1) {
+		
+		var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
+		if (jsonifiedSaveData != null) {
+			annotationSaveData = JSON.parse(jsonifiedSaveData);
+		} else {
+			localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
+		}
+		
 		addComponents();
 		if (stashEnabled === true) {
 			createStashComponent();
@@ -794,5 +817,40 @@ function triggerCustomization() {
 		if (detailDisabled === true) {
 			removeDetailView();
 		}
+		if (watcherBlur === true) {
+			removeBlurFromWatcherList();
+		}
 	}
 }
+
+/*
+DEFINE VARIABLES AND EXECUTE
+ */
+
+chrome.runtime.sendMessage({
+	method : "getLocalStorage",
+	key : CONFIG_SAVE_DATA
+}, function (response) {
+	configurationData = JSON.parse(response.data);
+	triggerDelay = configurationData["triggerDelay"];
+
+	// -- BEGIN VARIABLES --
+
+	jiraLocation = configurationData[CONFIG_JIRA_LOCATION];
+	values = JSON.parse(configurationData[CONFIG_DROP_DOWN_VALUES]);
+	downloadMetadataCheckboxes = JSON.parse(configurationData[CONFIG_ENABLED_METADATA_BOXES]);
+	stashEnabled = configurationData[CONFIG_STASH_ENABLED];
+	notesEnabled = configurationData[CONFIG_NOTES_ENABLED];
+	cleanupEnabled = configurationData[CONFIG_CLEANUP_ENABLED];
+	detailDisabled = configurationData[CONFIG_DETAILS_PANEL_DISABLED];
+	colorsEnabled = configurationData[CONFIG_DD_COLORS_ENABLED];
+	customDataEnabled = configurationData[CONFIG_CUSTOM_DATA_NOTES];
+	textSaveMode = configurationData[CONFIG_TEXT_SAVE_MODE];
+	dropDownMappings = JSON.parse(configurationData[CONFIG_DROP_DOWN_MAPPINGS]);
+	watcherBlur = JSON.parse(configurationData[CONFIG_WATCHER_BLUR]);
+
+	// -- END VARIABLES --
+
+	// Trigger customizations
+	setTimeout(triggerCustomization, triggerDelay);
+});
