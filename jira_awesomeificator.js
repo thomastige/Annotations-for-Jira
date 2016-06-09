@@ -2,7 +2,6 @@
 IMPORT
  */
 
-
 /*
 CONSTANT STRINGS
  */
@@ -153,6 +152,8 @@ function addComponents() {
 			startRow.insertBefore(createCopyPasteButtonForAgileBoard(currId), curr.childNodes[0].childNodes[0].childNodes[0]);
 
 		}
+	} else if (isTempoScreen()) {
+		document.getElementById("tempo-report-header-div").appendChild(getLoadLogFileButton());
 	}
 }
 
@@ -794,6 +795,10 @@ function isBugScreen() {
 	return (location.indexOf("browse") != -1);
 }
 
+function isTempoScreen() {
+	var location = window.location.href;
+	return (location.indexOf("TempoUserBoard") != -1);
+}
 
 /*
 DRIVER FUNCTION
@@ -801,14 +806,14 @@ DRIVER FUNCTION
 function triggerCustomization() {
 
 	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1) {
-		
+
 		var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
 		if (jsonifiedSaveData != null) {
 			annotationSaveData = JSON.parse(jsonifiedSaveData);
 		} else {
 			localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
 		}
-		
+
 		addComponents();
 		if (stashEnabled === true) {
 			createStashComponent();
@@ -820,6 +825,149 @@ function triggerCustomization() {
 		if (watcherBlur === true) {
 			removeBlurFromWatcherList();
 		}
+	}
+}
+
+/*
+TEMPO LOAD LOG FILE
+ */
+function getLoadLogFileButton() {
+	var btn = document.createElement("button");
+	btn.textContent = "Load log JSON";
+	btn.addEventListener("click", loadLogFile);
+	return btn;
+}
+
+var monthNames = [
+	"Jan", "Feb", "Mar",
+	"Apr", "May", "Jun", "Jul",
+	"Aug", "Sep", "Oct",
+	"Nov", "Dec"
+];
+var pathBase = jiraLocation + "/rest/tempo-rest/1.0/worklogs/";
+
+function getConstantParameters() {
+	var params = {};
+	var date = new Date();
+	var month = date.getMonth() + 1;
+	var today = date.getFullYear() + "-" + (month < 10 ? "0" + month : month) + "-" + (date.getDate() < 10 ? "0" + date.getDate() : date.getDate());
+	params["user"] = getMetaContentByName("ajs-remote-user");
+	params["id"] = ""
+		params["type"] = ""
+		params["use-ISO8061-week-numbers"] = "false"
+		params["ansidate"] = "";
+	params["ansienddate"] = today;
+	params["selected-panel"] = 0
+		params["analytics-origin-page"] = "TempoUserBoard"
+		params["analytics-origin-view"] = "timesheet"
+		params["analytics-origin-action"] = "click-log-work-button"
+		params["startTimeEnabled"] = "false"
+		params["tracker"] = "false"
+		params["planning"] = "false"
+		params["issue"] = "";
+	params["date"] = "";
+	params["enddate"] = "";
+	params["time"] = "";
+	params["billedTime"] = "";
+	params["comment"] = "";
+	params["_Role_"] = "";
+	return params;
+}
+
+function postCurrentBug(params, currentBug) {
+	var ansiDate = new Date(currentBug["date"]);
+	var todayDate = new Date();
+	var ansiMonth = ansiDate.getMonth() + 1;
+
+	params["issue"] = currentBug["bugNumber"];
+	params["date"] = currentBug["date"];
+	params["ansidate"] = ansiDate.getFullYear() + "-" + (ansiMonth < 10 ? "0" + ansiMonth : ansiMonth) + "-" + (ansiDate.getDate() < 10 ? "0" + ansiDate.getDate() : ansiDate.getDate());
+	params["enddate"] = (todayDate.getDate() < 10 ? "0" + todayDate.getDate() : todayDate.getDate()) + "/" + monthNames[todayDate.getMonth()] + "/" + todayDate.getFullYear().toString().substr(2, 2); // 09/Jun/16 // today? looks like today (so new Date() and then format)
+	params["time"] = currentBug["worked"];
+	params["billedTime"] = currentBug["billed"];
+
+	params["comment"] = currentBug["description"];
+	params["_Role_"] = currentBug["Role"];
+	var path = pathBase + currentBug["bugNumber"];
+	ajaxPost(path, params);
+}
+
+function ajaxPost(path, params) {
+
+	var ajax = {};
+	ajax.x = function () {
+		if (typeof XMLHttpRequest !== 'undefined') {
+			return new XMLHttpRequest();
+		}
+		var versions = [
+			"MSXML2.XmlHttp.6.0",
+			"MSXML2.XmlHttp.5.0",
+			"MSXML2.XmlHttp.4.0",
+			"MSXML2.XmlHttp.3.0",
+			"MSXML2.XmlHttp.2.0",
+			"Microsoft.XmlHttp"
+		];
+
+		var xhr;
+		for (var i = 0; i < versions.length; i++) {
+			try {
+				xhr = new ActiveXObject(versions[i]);
+				break;
+			} catch (e) {}
+		}
+		return xhr;
+	};
+
+	ajax.send = function (url, callback, method, data, async) {
+		if (async === undefined) {
+			async = true;
+		}
+		var x = ajax.x();
+		x.open(method, url, async);
+		x.onreadystatechange = function () {
+			if (x.readyState == 4) {
+				callback(x.responseText)
+			}
+		};
+		if (method == 'POST') {
+			x.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+		}
+		x.send(data)
+	};
+
+	ajax.post = function (url, data, callback, async) {
+		var query = [];
+		for (var key in data) {
+			query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
+		}
+		ajax.send(url, callback, 'POST', query.join('&'), async)
+	};
+	ajax.post(path, params, function () {});
+}
+
+function getMetaContentByName(name, content) {
+	var content = (content == null) ? 'content' : content;
+	return document.querySelector("meta[name='" + name + "']").getAttribute(content);
+}
+
+function loadLogFile() {
+	var logFileContent = document.getElementById("LogFileContent");
+	if (logFileContent != null) {
+		if (LogFileContent.value != "") {
+			var bugString = LogFileContent.value;
+			if (bugString != null && bugString != "") {
+				var bugs = JSON.parse(bugString);
+				var constants = getConstantParameters();
+				for (var i = 0; i < bugs.length; ++i) {
+					postCurrentBug(constants, bugs[i]);
+				}
+			}
+			location.reload();
+		}
+	} else {
+		var textArea = document.createElement("textarea");
+		textArea.setAttribute("id", "LogFileContent");
+		document.getElementById("tempo-report-header-div").appendChild(textArea);
 	}
 }
 
