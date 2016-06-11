@@ -82,6 +82,7 @@ function saveSaveables() {
 }
 
 function createSelectNode(currId, array) {
+	var map = JSON.parse(dropDownMappings[array]);
 	var select = document.createElement("select");
 	select.setAttribute("id", currId + CUSTOM_SELECT_ID + array);
 	select.setAttribute("arrayNumber", array);
@@ -90,6 +91,11 @@ function createSelectNode(currId, array) {
 		var option = document.createElement('option');
 		option.text = values[array][j];
 		select.add(option, j);
+		var value = getValue(map[option.text]);
+		if (value == null){
+			value = option.text;
+		}
+		option.value = value;
 	}
 	select.value = loadAnnotation(select.getAttribute("id"));
 	//applyColorMappings(select, array);
@@ -97,6 +103,24 @@ function createSelectNode(currId, array) {
 		selectNodeClickHandler(event);
 	});
 	return select;
+}
+
+function getValue(properties){
+	if (properties != null){
+		var mappingArray = properties.split(";");
+		for (var i = 0; i < mappingArray.length; ++i) {
+			var mapping = mappingArray[i];
+			var splitMapping = mapping.split(":");
+			if (splitMapping.length == 2) {
+				var component = splitMapping[0];
+				var value = splitMapping[1];
+				if (component === "value") {
+					return value;
+				}
+			} 
+		}
+	}
+	return null;
 }
 
 function selectNodeClickHandler(event) {
@@ -658,6 +682,9 @@ function createAppendDateButton(currId) {
 		var id = event.target.getAttribute("id");
 		id = id.replace("addDate", '');
 		var notePad = document.getElementById(getNotePadId(currId));
+		if (!notePad.value.endsWith("\n")){
+			notePad.value = notePad.value.concat("\n");
+		}
 		notePad.value = notePad.value.concat(getDateBlock());
 	});
 	return btn;
@@ -783,52 +810,6 @@ function removeBlurFromWatcherList() {
 }
 
 /*
-UTILITY FUNCTIONS TO DETERMINE SCREEN
- */
-function isRapidBoardScreen() {
-	var location = window.location.href;
-	return (location.indexOf("RapidBoard.jspa") != -1);
-}
-
-function isBugScreen() {
-	var location = window.location.href;
-	return (location.indexOf("browse") != -1);
-}
-
-function isTempoScreen() {
-	var location = window.location.href;
-	return (location.indexOf("TempoUserBoard") != -1);
-}
-
-/*
-DRIVER FUNCTION
- */
-function triggerCustomization() {
-
-	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1) {
-
-		var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
-		if (jsonifiedSaveData != null) {
-			annotationSaveData = JSON.parse(jsonifiedSaveData);
-		} else {
-			localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
-		}
-
-		addComponents();
-		if (stashEnabled === true) {
-			createStashComponent();
-		}
-		createToDoListComponent();
-		if (detailDisabled === true) {
-			removeDetailView();
-		}
-		if (watcherBlur === true) {
-			removeBlurFromWatcherList();
-		}
-	}
-}
-
-/*
 TEMPO LOAD LOG FILE
  */
 function getLoadLogFileButton() {
@@ -838,13 +819,13 @@ function getLoadLogFileButton() {
 	return btn;
 }
 
-var monthNames = [
+const monthNames = [
 	"Jan", "Feb", "Mar",
 	"Apr", "May", "Jun", "Jul",
 	"Aug", "Sep", "Oct",
 	"Nov", "Dec"
 ];
-var pathBase = jiraLocation + "/rest/tempo-rest/1.0/worklogs/";
+const pathBase = window.location.protocol + "//" + window.location.host + "/rest/tempo-rest/1.0/worklogs/";
 
 function getConstantParameters() {
 	var params = {};
@@ -968,6 +949,53 @@ function loadLogFile() {
 		var textArea = document.createElement("textarea");
 		textArea.setAttribute("id", "LogFileContent");
 		document.getElementById("tempo-report-header-div").appendChild(textArea);
+	}
+}
+
+
+/*
+UTILITY FUNCTIONS TO DETERMINE SCREEN
+ */
+function isRapidBoardScreen() {
+	var location = window.location.href;
+	return (location.indexOf("RapidBoard.jspa") != -1);
+}
+
+function isBugScreen() {
+	var location = window.location.href;
+	return (location.indexOf("browse") != -1);
+}
+
+function isTempoScreen() {
+	var location = window.location.href;
+	return (location.indexOf("TempoUserBoard") != -1);
+}
+
+/*
+DRIVER FUNCTION
+ */
+function triggerCustomization() {
+
+	if (jiraLocation != null && jiraLocation != '' && window.location.href.indexOf(jiraLocation) != -1) {
+
+		var jsonifiedSaveData = localStorage.getItem(ANNOTATION_SAVE_DATA);
+		if (jsonifiedSaveData != null) {
+			annotationSaveData = JSON.parse(jsonifiedSaveData);
+		} else {
+			localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
+		}
+
+		addComponents();
+		if (stashEnabled === true) {
+			createStashComponent();
+		}
+		createToDoListComponent();
+		if (detailDisabled === true) {
+			removeDetailView();
+		}
+		if (watcherBlur === true) {
+			removeBlurFromWatcherList();
+		}
 	}
 }
 
