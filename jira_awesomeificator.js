@@ -600,10 +600,12 @@ function createNotePadComponent(currId) {
 	var notePad = createNotePad(currId);
 	var saveButton = createNotePadSaveButton(currId);
 	var dateButton = createAppendDateButton(currId);
+	var ovrdDateButton = createAppendDateButton(currId, true);
 	//Add components end
 	ul.appendChild(notePad);
 	ul.appendChild(saveButton);
 	ul.appendChild(dateButton);
+	ul.appendChild(ovrdDateButton);
 	header.appendChild(label);
 	toggleWrap.appendChild(header);
 	contentDiv.appendChild(ul);
@@ -674,18 +676,26 @@ function addAdditionalData() {
 	return result;
 }
 
-function createAppendDateButton(currId) {
+function createAppendDateButton(currId, overrides = false) {
 	var btn = document.createElement("button");
 	btn.setAttribute("id", "addDate" + currId);
-	btn.textContent = "Append Date";
+	if (!overrides){
+		btn.textContent = "Append Date";
+	} else {
+		btn.textContent = "Append Date (include overrides)";
+		btn.setAttribute("overrideTags", "true");
+	}
 	btn.addEventListener("click", function (event) {
 		var id = event.target.getAttribute("id");
 		id = id.replace("addDate", '');
 		var notePad = document.getElementById(getNotePadId(currId));
-		if (!notePad.value.endsWith("\n")){
+		if (notePad.value != ""){
+			if (!notePad.value.endsWith("\n")){
+				notePad.value = notePad.value.concat("\n");
+			}
 			notePad.value = notePad.value.concat("\n");
 		}
-		notePad.value = notePad.value.concat(getDateBlock());
+		notePad.value = notePad.value.concat(getDateBlock(event.target.getAttribute("overrideTags")));
 	});
 	return btn;
 }
@@ -694,17 +704,31 @@ function getNotePadId(id) {
 	return (id + NOTEPAD_ID);
 }
 
-function getDateBlock() {
+function getDateBlock(overrides = false) {
 	var date = new Date();
 	var monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-	var dateString = "| " + date.getDate() + " " + monthNames[date.getMonth()] + " " + date.getFullYear() + " |";
-	var length = dateString.length;
-	var bar = "\n+";
-	for (var i = 1; i < dateString.length - 1; ++i) {
+	var dateString = "| " + date.getDate() + " " + monthNames[date.getMonth()] + " " + date.getFullYear() + " |\n";
+	var length = dateString.length-1;
+	var bar = "+";
+	for (var i = 1; i < length -1; ++i) {
 		bar = bar.concat("-");
 	}
 	bar = bar.concat("+\n");
+	if (overrides){
+		console.log(dateString);
+		dateString = dateString.concat(getOverride("Worked:", bar.length));
+		console.log(dateString);
+	}
 	return bar + dateString + bar;
+}
+
+function getOverride(text, length){
+	var paddedText = "| ";
+	paddedText = paddedText.concat(text);
+	for (var i = paddedText.length; i<length-2; ++i){
+		paddedText = paddedText.concat(" ");
+	}
+	return paddedText + "|\n";
 }
 
 /*
