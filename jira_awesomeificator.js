@@ -624,8 +624,62 @@ function createNotePad(currId) {
 	notePad.rows = 10;
 	notePad.cols = 70;
 	notePad.addEventListener(textSaveMode, save);
+	notePad.addEventListener("blur", function(event) {
+			fixTables(event.target);
+	});
 	return notePad;
 }
+
+
+function fixTables(textArea){
+	var splitText = textArea.value.split("\n");
+	for (var i=0; i<splitText.length; ++i){
+		var line = splitText[i];
+		if (line.startsWith("+") && line.endsWith("+")){
+			var counter = i;
+			var isFrame = false;
+			var block = [];
+			block.push("+-+");
+			while(splitText[++counter].startsWith("|") && splitText[counter].endsWith("|")){
+				block.push(splitText[counter].slice(0, splitText[counter].length-1).trim() + "|");	
+			}
+			if (splitText[counter] === line) {
+				block.push("+-+");
+				isFrame = true;
+			}
+			if (isFrame){
+				var length = 0;
+				for (var j=0; j<block.length; ++j){
+					if (block[j].length > length){
+						length = block[j].length;
+					}
+				}
+				for (var j=0; j<block.length; ++j){
+					if (block[j].length <= length){
+						var difference = length - (block[j].length -1);
+						var str = block[j];
+						var compensation = "";
+						for (var k = 0; k < difference; ++k){
+							if (str.startsWith("+")){
+								compensation = compensation.concat("-")
+							} else if(str.startsWith("|")){
+								compensation = compensation.concat(" ")
+							}
+						}
+						str = str.slice(0, str.length-1).concat(compensation).concat(str[str.length-1])
+						block[j] = str;
+					}
+				}
+				for (var j=0; j<block.length; ++j){
+					splitText[i++] = block[j];
+				}
+			}
+		}
+	}
+	textArea.value = splitText.join("\n");
+	save();
+}
+
 
 function createNotePadSaveButton(currId) {
 	var btn = document.createElement("button");
@@ -715,9 +769,8 @@ function getDateBlock(overrides = false) {
 	}
 	bar = bar.concat("+\n");
 	if (overrides){
-		console.log(dateString);
 		dateString = dateString.concat(getOverride("Worked:", bar.length));
-		console.log(dateString);
+		dateString = dateString.concat(getOverride("Comment:", bar.length));
 	}
 	return bar + dateString + bar;
 }

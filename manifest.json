@@ -1,7 +1,7 @@
 {
     "name": "Jira Awesome-Ificator",
     "description": "Add additional features on Jira to facilitate personal and individual issue management.",
-    "version": "0.28",
+    "version": "0.29",
     "permissions": [
     "tabs","<all_urls>"
     ],
