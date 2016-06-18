@@ -81,6 +81,10 @@ function saveSaveables() {
 	}
 }
 
+function saveElement(target) {
+	saveAnnotation(target.getAttribute("id"), target.value);
+}
+
 function createSelectNode(currId, array) {
 	var map = JSON.parse(dropDownMappings[array]);
 	var select = document.createElement("select");
@@ -92,7 +96,7 @@ function createSelectNode(currId, array) {
 		option.text = values[array][j];
 		select.add(option, j);
 		var value = getValue(map[option.text]);
-		if (value == null){
+		if (value == null) {
 			value = option.text;
 		}
 		option.value = value;
@@ -105,8 +109,8 @@ function createSelectNode(currId, array) {
 	return select;
 }
 
-function getValue(properties){
-	if (properties != null){
+function getValue(properties) {
+	if (properties != null) {
 		var mappingArray = properties.split(";");
 		for (var i = 0; i < mappingArray.length; ++i) {
 			var mapping = mappingArray[i];
@@ -117,7 +121,7 @@ function getValue(properties){
 				if (component === "value") {
 					return value;
 				}
-			} 
+			}
 		}
 	}
 	return null;
@@ -137,7 +141,13 @@ function createInputNode(currId) {
 	if (inputValue != null) {
 		input.value = inputValue;
 	}
-	input.addEventListener(textSaveMode, save);
+	if (cleanupEnabled === true) {
+		input.addEventListener(textSaveMode, save);
+	} else {
+		input.addEventListener(textSaveMode, function (event) {
+			saveElement(event.target);
+		});
+	}
 	return input;
 }
 
@@ -295,7 +305,13 @@ function createIssueRow(issues) {
 	if (inputValue != null) {
 		input.value = inputValue;
 	}
-	input.addEventListener(textSaveMode, save);
+	if (cleanupEnabled === true) {
+		input.addEventListener(textSaveMode, save);
+	} else {
+		input.addEventListener(textSaveMode, function (event) {
+			saveElement(event.target);
+		});
+	}
 	input.size = 100;
 	endRowInner.appendChild(input);
 	endRow.appendChild(endRowInner);
@@ -623,54 +639,59 @@ function createNotePad(currId) {
 	}
 	notePad.rows = 10;
 	notePad.cols = 70;
-	notePad.addEventListener(textSaveMode, save);
-	notePad.addEventListener("blur", function(event) {
-			fixTables(event.target);
+	if (cleanupEnabled === true) {
+		notePad.addEventListener(textSaveMode, save);
+	} else {
+		notePad.addEventListener(textSaveMode, function (event) {
+			saveElement(event.target);
+		});
+	}
+	notePad.addEventListener("blur", function (event) {
+		fixTables(event.target);
 	});
 	return notePad;
 }
 
-
-function fixTables(textArea){
+function fixTables(textArea) {
 	var splitText = textArea.value.split("\n");
-	for (var i=0; i<splitText.length; ++i){
+	for (var i = 0; i < splitText.length; ++i) {
 		var line = splitText[i];
-		if (line.startsWith("+") && line.endsWith("+")){
+		if (line.startsWith("+") && line.endsWith("+")) {
 			var counter = i;
 			var isFrame = false;
 			var block = [];
 			block.push("+-+");
-			while(splitText[++counter].startsWith("|") && splitText[counter].endsWith("|")){
-				block.push(splitText[counter].slice(0, splitText[counter].length-1).trim() + "|");	
+			while (splitText[++counter].startsWith("|") && splitText[counter].endsWith("|")) {
+				block.push(splitText[counter].slice(0, splitText[counter].length - 1).trim() + "|");
 			}
 			if (splitText[counter] === line) {
 				block.push("+-+");
 				isFrame = true;
 			}
-			if (isFrame){
+			if (isFrame) {
 				var length = 0;
-				for (var j=0; j<block.length; ++j){
-					if (block[j].length > length){
+				for (var j = 0; j < block.length; ++j) {
+					if (block[j].length > length) {
 						length = block[j].length;
 					}
 				}
-				for (var j=0; j<block.length; ++j){
-					if (block[j].length <= length){
-						var difference = length - (block[j].length -1);
+				for (var j = 0; j < block.length; ++j) {
+					if (block[j].length <= length) {
+						var difference = length - (block[j].length - 1);
 						var str = block[j];
 						var compensation = "";
-						for (var k = 0; k < difference; ++k){
-							if (str.startsWith("+")){
+						for (var k = 0; k < difference; ++k) {
+							if (str.startsWith("+")) {
 								compensation = compensation.concat("-")
-							} else if(str.startsWith("|")){
+							} else if (str.startsWith("|")) {
 								compensation = compensation.concat(" ")
 							}
 						}
-						str = str.slice(0, str.length-1).concat(compensation).concat(str[str.length-1])
-						block[j] = str;
+						str = str.slice(0, str.length - 1).concat(compensation).concat(str[str.length - 1])
+							block[j] = str;
 					}
 				}
-				for (var j=0; j<block.length; ++j){
+				for (var j = 0; j < block.length; ++j) {
 					splitText[i++] = block[j];
 				}
 			}
@@ -679,7 +700,6 @@ function fixTables(textArea){
 	textArea.value = splitText.join("\n");
 	save();
 }
-
 
 function createNotePadSaveButton(currId) {
 	var btn = document.createElement("button");
@@ -733,7 +753,7 @@ function addAdditionalData() {
 function createAppendDateButton(currId, overrides = false) {
 	var btn = document.createElement("button");
 	btn.setAttribute("id", "addDate" + currId);
-	if (!overrides){
+	if (!overrides) {
 		btn.textContent = "Append Date";
 	} else {
 		btn.textContent = "Append Date (include overrides)";
@@ -743,8 +763,8 @@ function createAppendDateButton(currId, overrides = false) {
 		var id = event.target.getAttribute("id");
 		id = id.replace("addDate", '');
 		var notePad = document.getElementById(getNotePadId(currId));
-		if (notePad.value != ""){
-			if (!notePad.value.endsWith("\n")){
+		if (notePad.value != "") {
+			if (!notePad.value.endsWith("\n")) {
 				notePad.value = notePad.value.concat("\n");
 			}
 			notePad.value = notePad.value.concat("\n");
@@ -762,23 +782,23 @@ function getDateBlock(overrides = false) {
 	var date = new Date();
 	var monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
 	var dateString = "| " + date.getDate() + " " + monthNames[date.getMonth()] + " " + date.getFullYear() + " |\n";
-	var length = dateString.length-1;
+	var length = dateString.length - 1;
 	var bar = "+";
-	for (var i = 1; i < length -1; ++i) {
+	for (var i = 1; i < length - 1; ++i) {
 		bar = bar.concat("-");
 	}
 	bar = bar.concat("+\n");
-	if (overrides){
+	if (overrides) {
 		dateString = dateString.concat(getOverride("Worked:", bar.length));
 		dateString = dateString.concat(getOverride("Comment:", bar.length));
 	}
 	return bar + dateString + bar;
 }
 
-function getOverride(text, length){
+function getOverride(text, length) {
 	var paddedText = "| ";
 	paddedText = paddedText.concat(text);
-	for (var i = paddedText.length; i<length-2; ++i){
+	for (var i = paddedText.length; i < length - 2; ++i) {
 		paddedText = paddedText.concat(" ");
 	}
 	return paddedText + "|\n";
@@ -932,22 +952,29 @@ function getConstantParameters() {
 	return params;
 }
 
-function postCurrentBug(params, currentBug) {
-	var ansiDate = new Date(currentBug["date"]);
-	var todayDate = new Date();
-	var ansiMonth = ansiDate.getMonth() + 1;
+//NOTE: this was refactored to use recursion instead of a for loop because the environment is too slow and would stop registering the bugs if it received too many.
+function postCurrentBug(params, bugList, counter, limit) {
+	if (counter < limit){
+		var currentBug = bugList[counter];
+		var ansiDate = new Date(currentBug["date"]);
+		var todayDate = new Date();
+		var ansiMonth = ansiDate.getMonth() + 1;
 
-	params["issue"] = currentBug["bugNumber"];
-	params["date"] = currentBug["date"];
-	params["ansidate"] = ansiDate.getFullYear() + "-" + (ansiMonth < 10 ? "0" + ansiMonth : ansiMonth) + "-" + (ansiDate.getDate() < 10 ? "0" + ansiDate.getDate() : ansiDate.getDate());
-	params["enddate"] = (todayDate.getDate() < 10 ? "0" + todayDate.getDate() : todayDate.getDate()) + "/" + monthNames[todayDate.getMonth()] + "/" + todayDate.getFullYear().toString().substr(2, 2); // 09/Jun/16 // today? looks like today (so new Date() and then format)
-	params["time"] = currentBug["worked"];
-	params["billedTime"] = currentBug["billed"];
+		params["issue"] = currentBug["bugNumber"];
+		params["date"] = currentBug["date"];
+		params["ansidate"] = ansiDate.getFullYear() + "-" + (ansiMonth < 10 ? "0" + ansiMonth : ansiMonth) + "-" + (ansiDate.getDate() < 10 ? "0" + ansiDate.getDate() : ansiDate.getDate());
+		params["enddate"] = (todayDate.getDate() < 10 ? "0" + todayDate.getDate() : todayDate.getDate()) + "/" + monthNames[todayDate.getMonth()] + "/" + todayDate.getFullYear().toString().substr(2, 2); // 09/Jun/16 // today? looks like today (so new Date() and then format)
+		params["time"] = currentBug["worked"];
+		params["billedTime"] = currentBug["billed"];
 
-	params["comment"] = currentBug["description"];
-	params["_Role_"] = currentBug["Role"];
-	var path = pathBase + currentBug["bugNumber"];
-	ajaxPost(path, params);
+		params["comment"] = currentBug["description"];
+		params["_Role_"] = currentBug["Role"];
+		var path = pathBase + currentBug["bugNumber"];
+		ajaxPost(path, params);
+		setTimeout(50, function(){postCurrentBug(params, bugList, ++counter, limit)});
+	} else {
+		window.location.reload;
+	}
 }
 
 function ajaxPost(path, params) {
@@ -1014,13 +1041,14 @@ function loadLogFile() {
 		if (LogFileContent.value != "") {
 			var bugString = LogFileContent.value;
 			if (bugString != null && bugString != "") {
-				var bugs = JSON.parse(bugString);
+				var bugs = JSON.parse("[" + bugString + "]");
 				var constants = getConstantParameters();
-				for (var i = 0; i < bugs.length; ++i) {
-					postCurrentBug(constants, bugs[i]);
-				}
+				var counter = 0;
+				postCurrentBug(constants, bugs, counter, bugs.length);
+				//for (var i = 0; i < bugs.length; ++i) {
+					//postCurrentBug(constants, bugs[i]);
+				//}
 			}
-			location.reload();
 		}
 	} else {
 		var textArea = document.createElement("textarea");
@@ -1028,7 +1056,6 @@ function loadLogFile() {
 		document.getElementById("tempo-report-header-div").appendChild(textArea);
 	}
 }
-
 
 /*
 UTILITY FUNCTIONS TO DETERMINE SCREEN
