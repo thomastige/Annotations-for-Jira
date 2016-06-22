@@ -770,6 +770,7 @@ function createAppendDateButton(currId, overrides = false) {
 			notePad.value = notePad.value.concat("\n");
 		}
 		notePad.value = notePad.value.concat(getDateBlock(event.target.getAttribute("overrideTags")));
+		saveAnnotation(getNotePadId(id), notePad.value);
 	});
 	return btn;
 }
@@ -857,14 +858,6 @@ function applyColorMappings(element, array) {
 	if (colorsEnabled === true) {
 		var map = JSON.parse(dropDownMappings[array]);
 		if (element.value != null && map[element.value] != null) {
-			/*
-			var background = element.style.backgroundColor;
-			var row = element.parentNode.parentNode.style.backgroundColor;
-			var text = element.parentNode.parentNode.style.color;
-			 */
-			var background = DEFAULT_DROPDOWN_COLOR;
-			var row = DEFAULT_ROW_COLOR;
-			var text = DEFAULT_FONT_COLOR;
 			var mappingArray = map[element.value].split(";");
 			for (var i = 0; i < mappingArray.length; ++i) {
 				var mapping = mappingArray[i];
@@ -874,21 +867,16 @@ function applyColorMappings(element, array) {
 					var component = splitMapping[0];
 					var value = splitMapping[1];
 					if (component === "dropdown") {
-						background = value;
+						element.style.backgroundColor = value;
 					} else if (component === "row") {
 						var id = element.id;
-						row = value;
+						element.parentNode.parentNode.style.backgroundColor = value;
 					} else if (component === "text") {
 						var id = element.id;
-						text = value;
+						element.parentNode.parentNode.style.color = value;
 					}
-				} else {
-					background = splitMapping[0];
 				}
 			}
-			element.style.backgroundColor = background;
-			element.parentNode.parentNode.style.backgroundColor = row;
-			element.parentNode.parentNode.style.color = text;
 		}
 	}
 }
@@ -971,9 +959,13 @@ function postCurrentBug(params, bugList, counter, limit) {
 		params["_Role_"] = currentBug["Role"];
 		var path = pathBase + currentBug["bugNumber"];
 		ajaxPost(path, params);
-		setTimeout(50, function(){postCurrentBug(params, bugList, ++counter, limit)});
+	
+		setTimeout(function(){
+			postCurrentBug(params, bugList, ++counter, limit);
+			}, 50);
+			
 	} else {
-		window.location.reload;
+		location.reload;
 	}
 }
 
