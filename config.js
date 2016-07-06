@@ -10,6 +10,7 @@ document.getElementById("cleanupEnabled").addEventListener("click", save);
 document.getElementById("detailDisabled").addEventListener("click", save);
 document.getElementById("colorsEnabled").addEventListener("click", save);
 document.getElementById("watcherBlur").addEventListener("click", save);
+document.getElementById("enableDropDownNames").addEventListener("click", save);
 document.getElementById("textSaveMode").addEventListener("click", save);
 document.getElementById("customDataEnabled").addEventListener("click", saveAndReload);
 document.getElementById("jiraLocation").addEventListener("keyup", save);
@@ -51,7 +52,13 @@ function addDropDown() {
 	checkbox.setAttribute("class", "dropDownMetadataCheckbox");
 	checkbox.addEventListener("click", save);
 
+	var ddName = document.createElement("input");
+	ddName.setAttribute("id", "dropDownName" + counter);
+	ddName.setAttribute("class", "dropDownName");
+	ddName.addEventListener("keyup", save);
+	ddName.value = "Drop Down " + counter;
 	div.appendChild(newText);
+	div.appendChild(ddName);
 
 	if (document.getElementById("customDataEnabled").checked) {
 		div.appendChild(linebreak);
@@ -75,9 +82,12 @@ function save() {
 	var customDataEnabled = document.getElementById("customDataEnabled").checked;
 	var colorsEnabled = document.getElementById("colorsEnabled").checked;
 	var watcherBlur = document.getElementById("watcherBlur").checked;
+	var enableDropDownNames = document.getElementById("enableDropDownNames").checked;
 	var dropDowns = document.getElementsByClassName("dropDowns");
+	var dropDownNewNames = document.getElementsByClassName("dropDownName");
 	var textSaveMode = document.getElementById("textSaveMode").value;
 	var dropDownsValues = [];
+	var dropDownNames = [];
 	var colorMappings = {};
 	for (var i = 0; i < dropDowns.length; ++i) {
 		var textValue = dropDowns[i].value;
@@ -103,6 +113,7 @@ function save() {
 			}
 			colorMappings[i] = JSON.stringify(mappings);
 			dropDownsValues.push(values);
+			dropDownNames.push(dropDownNewNames[i].value);
 		}
 	}
 	
@@ -122,6 +133,7 @@ function save() {
 		"triggerDelay" : triggerDelay,
 		"dropDownArraysConfig" : JSON.stringify(dropDownsValues),
 		"dropDownMappings" : JSON.stringify(colorMappings),
+		"dropDownNames" : JSON.stringify(dropDownNames),
 		"enabledBoxesConfig" : JSON.stringify(enabledBoxes),
 		"notesConfig" : notesEnabled,
 		"cleanupConfig" : cleanupEnabled,
@@ -129,6 +141,7 @@ function save() {
 		"customDataConfig" : customDataEnabled,
 		"colorsEnabled" : colorsEnabled,
 		"watcherBlur" : watcherBlur,
+		"enableDropDownNames" : enableDropDownNames,
 		"stashConfig" : stashEnabled,
 		"textSaveMode" : textSaveMode
 	};
@@ -152,8 +165,10 @@ function loadConfig() {
 	var detail = data["detailConfig"];
 	var colorsEnabled = data["colorsEnabled"];
 	var watcherBlur = data["watcherBlur"];
+	var enableDropDownNames = data["enableDropDownNames"];
 	var customData = data["customDataConfig"];
 	var dropDowns = JSON.parse(data["dropDownArraysConfig"]);
+	var dropDownNames = JSON.parse(data["dropDownNames"]);
 	var mappings = JSON.parse(data["dropDownMappings"]);
 	var enabledBoxes = JSON.parse(data["enabledBoxesConfig"]);
 
@@ -175,6 +190,9 @@ function loadConfig() {
 	if (colorsEnabled === true) {
 		document.getElementById("colorsEnabled").checked = true;
 	}
+	if (enableDropDownNames === true) {
+		document.getElementById("enableDropDownNames").checked = true;
+	}
 	if (watcherBlur === true) {
 		document.getElementById("watcherBlur").checked = true;
 	}
@@ -195,6 +213,7 @@ function loadConfig() {
 			}
 			content = splitContent.join('\n');
 			newTextArea.value = content;
+			document.getElementById("dropDownName" + i).value = dropDownNames[i];
 		}
 	}
 	if (enabledBoxes != null) {

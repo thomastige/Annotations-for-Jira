@@ -20,6 +20,8 @@ const CONFIG_SAVE_DATA = "configurationData";
 const CONFIG_JIRA_LOCATION = "jiraLocationConfig";
 const CONFIG_DROP_DOWN_VALUES = "dropDownArraysConfig";
 const CONFIG_DROP_DOWN_MAPPINGS = "dropDownMappings";
+const CONFIG_DROP_DOWN_NAMES = "dropDownNames";
+const CONFIG_DROP_DOWN_NAMES_ENABLED = "enableDropDownNames";
 const CONFIG_ENABLED_METADATA_BOXES = "enabledBoxesConfig";
 const CONFIG_NOTES_ENABLED = "notesConfig";
 const CONFIG_CLEANUP_ENABLED = "cleanupConfig";
@@ -40,6 +42,7 @@ var triggerDelay;
 var jiraLocation;
 var values;
 var dropDownMappings;
+var dropDownNames;
 var downloadMetadata;
 var stashEnabled;
 var notesEnabled;
@@ -90,6 +93,7 @@ function createSelectNode(currId, array) {
 	var select = document.createElement("select");
 	select.setAttribute("id", currId + CUSTOM_SELECT_ID + array);
 	select.setAttribute("arrayNumber", array);
+	select.setAttribute(CONFIG_DROP_DOWN_NAMES, dropDownNames[array]);
 	select.setAttribute("class", SAVEABLE_CLASSNAME + " " + CLASS_DROPDOWN);
 	for (var j = 0; j < values[array].length; j++) {
 		var option = document.createElement('option');
@@ -619,6 +623,7 @@ function createNotePadComponent(currId) {
 	var ovrdDateButton = createAppendDateButton(currId, true);
 	//Add components end
 	ul.appendChild(notePad);
+	ul.appendChild(document.createElement("br"));
 	ul.appendChild(saveButton);
 	ul.appendChild(dateButton);
 	ul.appendChild(ovrdDateButton);
@@ -717,7 +722,7 @@ function createNotePadSaveButton(currId) {
 		} else {
 			sprint = sprint.textContent;
 		}
-		var fileNameToSaveAs = NOTENAME_PREFIX + sprint + NOTENAME_SEPARATOR + event.target.getAttribute("id") + " - " + document.getElementById("summary-val").textContent;
+		var fileNameToSaveAs = NOTENAME_PREFIX + sprint + NOTENAME_SEPARATOR + event.target.getAttribute("id") + " - " + document.getElementById("summary-val").textContent + ".txt";
 
 		var downloadLink = document.createElement("a");
 		downloadLink.download = fileNameToSaveAs;
@@ -743,6 +748,9 @@ function addAdditionalData() {
 		for (var i = 0; i < downloadMetadataCheckboxes.length; ++i) {
 			var idNumber = downloadMetadataCheckboxes[i];
 			result += NOTENAME_SEPARATOR;
+			if (enableDropDownNames){
+				result += elems[idNumber].getAttribute(CONFIG_DROP_DOWN_NAMES) + ":";
+			}
 			result += elems[idNumber].value;
 		}
 		result = result + "__]\n";
@@ -965,7 +973,7 @@ function postCurrentBug(params, bugList, counter, limit) {
 			}, 50);
 			
 	} else {
-		location.reload;
+		location.reload();
 	}
 }
 
@@ -1119,6 +1127,8 @@ chrome.runtime.sendMessage({
 	customDataEnabled = configurationData[CONFIG_CUSTOM_DATA_NOTES];
 	textSaveMode = configurationData[CONFIG_TEXT_SAVE_MODE];
 	dropDownMappings = JSON.parse(configurationData[CONFIG_DROP_DOWN_MAPPINGS]);
+	dropDownNames = JSON.parse(configurationData[CONFIG_DROP_DOWN_NAMES]);
+	enableDropDownNames = configurationData[CONFIG_DROP_DOWN_NAMES_ENABLED];
 	watcherBlur = JSON.parse(configurationData[CONFIG_WATCHER_BLUR]);
 
 	// -- END VARIABLES --
