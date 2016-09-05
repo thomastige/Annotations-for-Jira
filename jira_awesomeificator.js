@@ -747,11 +747,13 @@ function addAdditionalData() {
 		var elems = document.getElementsByClassName(CLASS_DROPDOWN);
 		for (var i = 0; i < downloadMetadataCheckboxes.length; ++i) {
 			var idNumber = downloadMetadataCheckboxes[i];
-			result += NOTENAME_SEPARATOR;
-			if (enableDropDownNames){
-				result += elems[idNumber].getAttribute(CONFIG_DROP_DOWN_NAMES) + ":";
+			if (elems[idNumber].value != ''){
+				result += NOTENAME_SEPARATOR;
+				if (enableDropDownNames){
+					result += elems[idNumber].getAttribute(CONFIG_DROP_DOWN_NAMES) + ":";
+				}
+				result += elems[idNumber].value;
 			}
-			result += elems[idNumber].value;
 		}
 		result = result + "__]\n";
 	}
