@@ -370,6 +370,7 @@ function createStashButton(inStash = false) {
 function stashButtonListener() {
 	var key = document.getElementById("key-val").getAttribute("data-issue-key");
 	var label = document.getElementById("summary-val").textContent;
+	label = label.split('"').join('')
 	var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
 	if (issues == null) {
 		issues = [];
@@ -380,6 +381,7 @@ function stashButtonListener() {
 	} else {
 		issues.push([key, label]);
 	}
+
 	saveAnnotation("CustomIssueStash", JSON.stringify(issues));
 	toggleButton();
 }
@@ -674,7 +676,6 @@ function createNotePad(currId) {
 				var fileNameToSaveAs = NOTENAME_PREFIX + sprint + NOTENAME_SEPARATOR + document.getElementById("key-val").getAttribute("data-issue-key") + " - " + document.getElementById("summary-val").textContent + ".txt";
 				var toSave = fileNameToSaveAs + "|" + addAdditionalData();
 				toSave = toSave + event.target.value;
-				console.log(toSave)
 				saveAnnotation(event.target.getAttribute("id"), toSave);
 			}
 		});
