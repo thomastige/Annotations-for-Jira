@@ -290,11 +290,8 @@ function loadConfig() {
 		var backendLocation = data["backendLocation"];
 		if (backendSave) {
 			var backendSideString = ajaxGet(backendLocation + "/persist/settings");
-			console.log(backendSideString)
-			console.log(localStorage.getItem(CONFIG_SAVE_DATA))
 			if (backendSideString !== null && backendSideString !== ""){
 				var backendSide = JSON.parse(backendSideString);
-				console.log(backendSide);
 				if (backendSide !== null && backendSide !== "") {
 					data = backendSide;
 				}
