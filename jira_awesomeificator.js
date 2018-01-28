@@ -18,6 +18,7 @@ const ANNOTATION_SAVE_DATA = "annotationSaveData";
 const CONFIG_SAVE_DATA = "configurationData";
 
 const CONFIG_JIRA_LOCATION = "jiraLocationConfig";
+const CONFIG_BACKEND_LOCATION = "backendLocation";
 const CONFIG_DROP_DOWN_VALUES = "dropDownArraysConfig";
 const CONFIG_DROP_DOWN_MAPPINGS = "dropDownMappings";
 const CONFIG_DROP_DOWN_NAMES = "dropDownNames";
@@ -31,6 +32,7 @@ const CONFIG_STASH_ENABLED = "stashConfig";
 const CONFIG_DD_COLORS_ENABLED = "colorsEnabled";
 const CONFIG_TEXT_SAVE_MODE = "textSaveMode";
 const CONFIG_WATCHER_BLUR = "watcherBlur";
+const CONFIG_BACKEND_SAVE = "backendSave";
 
 const DEFAULT_DROPDOWN_COLOR = "white";
 const DEFAULT_ROW_COLOR = "white";
@@ -40,6 +42,7 @@ const DEFAULT_FONT_COLOR = "#333";
 var configurationData = {};
 var triggerDelay;
 var jiraLocation;
+var backendLocation;
 var values;
 var dropDownMappings;
 var dropDownNames;
@@ -51,6 +54,7 @@ var detailDisabled;
 var customDataEnabled;
 var colorsEnabled;
 var watcherBlur;
+var backendSave;
 var textSaveMode = "keyup";
 
 /*
@@ -190,6 +194,7 @@ function addComponents() {
 			startRow.insertBefore(createCopyPasteButtonForAgileBoard(currId), curr.childNodes[0].childNodes[0].childNodes[0]);
 
 		}
+
 	} else if (isTempoScreen()) {
 		document.getElementById("tempo-report-header-div").appendChild(getLoadLogFileButton());
 	}
@@ -224,7 +229,10 @@ function createStashComponent() {
 			storedStash = emptyArray;
 
 		}
-		var issues = JSON.parse(storedStash);
+		var issues;
+		if (storedStash != null && storedStash !== "") {
+			issues = JSON.parse(storedStash);
+		}
 
 		if (issues != null && issues[0] != null) {
 			var container = document.createElement("div");
@@ -386,7 +394,11 @@ function toggleButton() {
 }
 
 function getLocationInStash(key) {
-	var issues = JSON.parse(loadAnnotation("CustomIssueStash"));
+	var customStashValue = loadAnnotation("CustomIssueStash");
+	var issues;
+	if (customStashValue !== null && customStashValue !== "") {
+		issues = JSON.parse(customStashValue);
+	}
 	if (issues == null) {
 		saveAnnotation("CustomIssueStash", JSON.stringify([]))
 		issues = [];
@@ -411,7 +423,7 @@ TO DO LIST
 function createToDoListComponent() {
 	if (isRapidBoardScreen()) {
 		var storedTodos = loadAnnotation("CustomTodoStash");
-		if (storedTodos == null) {
+		if (storedTodos == null || storedTodos === "") {
 			var emptyArray = JSON.stringify([]);
 			saveAnnotation("CustomTodoStash", emptyArray);
 			storedTodos = emptyArray;
@@ -584,7 +596,7 @@ function createCopyPasteButtonForAgileBoard(currId) {
 		var copyFrom = document.createElement("textarea");
 		var key = event.target.getAttribute("id").replace("copyButton", '');
 		var label = "";
-		label = event.target.parentNode.childNodes[4].textContent
+		label = event.target.parentNode.childNodes[event.target.parentNode.childNodes.length-1].textContent
 			copyFrom.textContent = key + " - " + label;
 		var body = document.getElementsByTagName('body')[0];
 		body.appendChild(copyFrom);
@@ -636,7 +648,9 @@ function createNotePadComponent(currId) {
 
 function createNotePad(currId) {
 	var notePad = document.createElement("textarea");
-	notePad.setAttribute("class", SAVEABLE_CLASSNAME);
+	if (backendSave !== true) {
+		notePad.setAttribute("class", SAVEABLE_CLASSNAME);
+	}
 	notePad.setAttribute("id", getNotePadId(currId));
 	var content = loadAnnotation(notePad.getAttribute("id"));
 	if (content != null) {
@@ -648,7 +662,21 @@ function createNotePad(currId) {
 		notePad.addEventListener(textSaveMode, save);
 	} else {
 		notePad.addEventListener(textSaveMode, function (event) {
-			saveElement(event.target);
+			if (backendSave !== true) {
+				saveElement(event.target);
+			} else {
+				var sprint = document.getElementsByClassName("issueaction-greenhopper-rapidboard-operation js-rapidboard-operation-sprint")[0];
+				if (sprint == null) {
+					sprint = "Undefined Sprint";
+				} else {
+					sprint = sprint.textContent;
+				}
+				var fileNameToSaveAs = NOTENAME_PREFIX + sprint + NOTENAME_SEPARATOR + document.getElementById("key-val").getAttribute("data-issue-key") + " - " + document.getElementById("summary-val").textContent + ".txt";
+				var toSave = fileNameToSaveAs + "|" + addAdditionalData();
+				toSave = toSave + event.target.value;
+				console.log(toSave)
+				saveAnnotation(event.target.getAttribute("id"), toSave);
+			}
 		});
 	}
 	notePad.addEventListener("blur", function (event) {
@@ -845,17 +873,30 @@ function removeDetailView() {
 /*
 SAVE AND LOAD DATA
  */
+ 
+ function saveData(key, value){
+	 if (backendSave !== true) {
+		var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
+		annotationSaveData[key] = value;
+		localStorage.setItem(key, value);
+	 } else {
+		var output = {"key":key, "value":value};
+		ajaxPost(backendLocation + "/persist", output);
+	 }
+ }
 
 function saveAnnotation(key, value) {
-	var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
-	annotationSaveData[key] = value;
-	localStorage.setItem(ANNOTATION_SAVE_DATA, JSON.stringify(annotationSaveData));
+	saveData(key, value);
 }
 
 function loadAnnotation(key) {
-	var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
 	var retVal;
-	retVal = annotationSaveData[key];
+	if (backendSave !== true) {
+		var annotationSaveData = JSON.parse(localStorage.getItem(ANNOTATION_SAVE_DATA));
+		retVal = annotationSaveData[key];
+	} else {
+		retVal = ajaxGet(backendLocation + "/persist",{"key":key});
+	}
 	return retVal;
 }
 
@@ -979,6 +1020,8 @@ function postCurrentBug(params, bugList, counter, limit) {
 	}
 }
 
+
+
 function ajaxPost(path, params) {
 
 	var ajax = {};
@@ -1030,6 +1073,61 @@ function ajaxPost(path, params) {
 		ajax.send(url, callback, 'POST', query.join('&'), async)
 	};
 	ajax.post(path, params, function () {});
+}
+
+function ajaxGet(path, params) {
+
+	var ajax = {};
+	ajax.x = function () {
+		if (typeof XMLHttpRequest !== 'undefined') {
+			return new XMLHttpRequest();
+		}
+		var versions = [
+			"MSXML2.XmlHttp.6.0",
+			"MSXML2.XmlHttp.5.0",
+			"MSXML2.XmlHttp.4.0",
+			"MSXML2.XmlHttp.3.0",
+			"MSXML2.XmlHttp.2.0",
+			"Microsoft.XmlHttp"
+		];
+
+		var xhr;
+		for (var i = 0; i < versions.length; i++) {
+			try {
+				xhr = new ActiveXObject(versions[i]);
+				break;
+			} catch (e) {}
+		}
+		return xhr;
+	};
+
+	ajax.send = function (url, callback, method, data, async) {
+		if (async === undefined) {
+			async = true;
+		}
+		var x = ajax.x();
+		x.open(method, url, async);
+		x.onreadystatechange = function () {
+			if (x.readyState == 4) {
+				callback(x.responseText)
+			}
+		};
+		if (method == 'POST') {
+			x.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+		}
+		x.send(data)
+		return x.responseText;
+	};
+	ajax.get = function (url, data, callback, async) {
+		var query = [];
+		for (var key in data) {
+			query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
+		}
+		return ajax.send(url + (query.length ? '?' + query.join('&') : ''), callback, 'GET', null, async)
+	};
+	var result =
+	ajax.get(path, params, function (r) {return r}, false);
+	return result;
 }
 
 function getMetaContentByName(name, content) {
@@ -1088,9 +1186,9 @@ function triggerCustomization() {
 		if (jsonifiedSaveData != null) {
 			annotationSaveData = JSON.parse(jsonifiedSaveData);
 		} else {
-			localStorage.setItem(ANNOTATION_SAVE_DATA, "{}");
+			saveData(ANNOTATION_SAVE_DATA, "{}");
 		}
-
+		
 		addComponents();
 		if (stashEnabled === true) {
 			createStashComponent();
@@ -1119,6 +1217,7 @@ chrome.runtime.sendMessage({
 	// -- BEGIN VARIABLES --
 
 	jiraLocation = configurationData[CONFIG_JIRA_LOCATION];
+	backendLocation = configurationData[CONFIG_BACKEND_LOCATION];
 	values = JSON.parse(configurationData[CONFIG_DROP_DOWN_VALUES]);
 	downloadMetadataCheckboxes = JSON.parse(configurationData[CONFIG_ENABLED_METADATA_BOXES]);
 	stashEnabled = configurationData[CONFIG_STASH_ENABLED];
@@ -1132,6 +1231,7 @@ chrome.runtime.sendMessage({
 	dropDownNames = JSON.parse(configurationData[CONFIG_DROP_DOWN_NAMES]);
 	enableDropDownNames = configurationData[CONFIG_DROP_DOWN_NAMES_ENABLED];
 	watcherBlur = JSON.parse(configurationData[CONFIG_WATCHER_BLUR]);
+	backendSave = JSON.parse(configurationData[CONFIG_BACKEND_SAVE]);
 
 	// -- END VARIABLES --
 

@@ -1,3 +1,115 @@
-like this!
+Features<br>
+Backlog screen<br>
+- To Do List<br>
+- Bug Stash<br>
+- Bug Row Customization<br>
+	- Copy Button<br>
+	- Drop-Downs<br>
+	- Note field<br>
+<br>
+Bug screen<br>
+- Copy Button<br>
+- Stash Button<br>
+- Drop-Downs<br>
+- Notepad<br>
+<br>
+Tempo screen<br>
+- Time Sheet JSON Loading<br>
+<br>
+Settings screen<br>
+<br>
+<br>
+<br>
 
-
+<h1>Backlog Screen</h1><br>
+- To Do List<br>
+The To Do List is at the top of the Backlog screen and, by default, only contains a plain text field and an "Add" button. Clicking the "Add" button adds a note to the field, which will then be displayed as a read-only field and a "Done" button. Clicking the "Done" button removes the element from the list.<br>
+<br>
+- Bug Stash<br>
+Bugs can be added to the Bug Stash when viewing them individually. Adding a bug allows for it to be displayed in the stash.<br>
+The Stash displays the bugs as follows:<br>
+Bug number (serves as a link to the actual bug) | Bug Summary | Note Text Field | X button<br>
+<br>
+Clicking on the X button will remove a bug from the Stash.<br>
+<br>
+- Bug Row Customization<br>
+- Copy Button<br>
+The "C" button serves as a Copy button. Clicking it adds the bug to the clipboard with the following formatting:<br>
+Bug Number - Bug Summary<br>
+<br>
+- Drop-Downs<br>
+The drop-down menus that are added through the Settings screen are displayed here.<br>
+Those drop-down menus can be configured to set pre-set notes to the bugs present in the backlog screen. They can also be configured through the Settings screen to modify the background color, text color and drop-down color.<br>
+<br>
+- Note field<br>
+This note field can contain quick notes on a ticket that can be seen at a glance.<br>
+<br>
+<br>
+<h1>Bug Screen</h1><br>
+- Copy Button<br>
+The copy button found in the Bug screen is similar to the one found in the Backlog screen, but separates the bug number and summary with a line break rather than a dash.<br>
+<br>
+- Stash Button<br>
+Adds a bug to the Bug Stash, then toggles itself to "Destash", which will remove the bug from the stash if clicked.<br>
+<br>
+- Drop-Downs<br>
+The same drop-downs that were found on the Backlog screen can also be seen at the top of the individual bug page.<br>
+<br>
+- Notepad<br>
+the notepad component is added at the bottom right of the page. This Notepad component can contain plain text. It contains three buttons:<br>
+- download: Downloads the contents of the notepad as a text file, and includes the drop-downs as a header in the file if configured as such<br>
+- Append Date: Adds a box that contains the current date to the end of the notepad<br>
+- Append Date (include overrides): Adds a box that contains the current date, a "worked" field and a "Comment" field. Those are meant to be used with the File Mover project and will be consumed as such when building time sheets.<br>
+<br>
+<h1>Tempo Screen</h1><br>
+- Time Sheet JSON Loading<br>
+The File Mover application can be used to generate JSON files consumable by Tempo. It is then possible to load them directly in Tempo through a text area that is added at the top of the Tempo Calendar page.<br>
+<br>
+<h1>Settings Screen</h1><br>
+The Settings Screen contains the configurations for the extension.<br>
+- JIRA Base URL<br>
+The base URL of the JIRA site in use. This is present so that the extension is not loaded on every page visited.<br>
+<br>
+- Trigger Delay<br>
+Because JIRA uses dynamic page loading, it is not possible for the extension to know exactly when the page is populated with data. The value in this box should represent, in milliseconds, how long the extension waits before triggering itself.<br>
+<br>
+Enable Stash:<br>
+Checkbox to determine whether the Stash is enabled or not. Disabling it will remove it from the Backlog view and the individual bug view.<br>
+<br>
+Enable Notes: <br>
+Checkbox to determine whether the Notepad component is present or not in the bug view.<br>
+<br>
+Disable Detail View Panel:<br>
+Checkbox to disable the Detail View Panel that appears in the backlog screen when clicking on a ticket.<br>
+<br>
+Disable Watcher Blur:<br>
+Disables a JIRA issue that can be seen on certain environments where the Watcher list is blurry.<br>
+<br>
+Enable Drop-Down Names:<br>
+Adds the drop-down names (found at the top of a file) in Notepad file downloads. Disabling this will number them instead.<br>
+<br>
+Text Input Save Mode:<br>
+Change the save mode. Change to "when deselecting" to improve performance, which will save the contents of a text field when the focus is lost.<br>
+<br>
+Clean Up On Save:<br>
+Empties the contents of the extension's saved data every time data is saved on the backlog screen, then saves everything on the page again. <br>
+This is on its way out and a better solution will eventually be found to clean up the data.<br>
+<br>
+Add Custom Drop-Down data to notes:<br>
+Adds the drop-downs (found at the top of a file) in Notepad file downloads<br>
+<br>
+Enable drop-down menu colors:<br>
+Enables the configuration of the drop-downs to change the color in the Backlog screen.<br>
+<br>
+Drop-Down Configuration<br>
+Each entry of a drop-down can be configured to represent multiple values.<br>
+To add a drop-down, click on "Add Drop-Down". It will add a text box and a text field to its right. The text field should contain its name.<br>
+Each line in the text box will represent an entry in the drop-down menu.<br>
+Many options can be added to the drop-down entries by setting bracket arguments with the following format:<br>
+[arg1:value;arg2:value;arg3:value]<br>
+<br>
+The following arguments exist:<br>
+dropdown - will set the background color of the dropdown menu<br>
+row - will set the background color of the bug row in the backlog view<br>
+text - will set the font color in the backlog view<br>
+value - will set a different value to the metadata when downloading 

@@ -3,6 +3,7 @@ const ENTRY_CONFIG_DELIMITER = '[';
 
 
 var saveData = {};
+document.getElementById("backendSave").addEventListener("click", save);
 document.getElementById("addTextField").addEventListener("click", addDropDown);
 document.getElementById("stashEnabled").addEventListener("click", save);
 document.getElementById("notesEnabled").addEventListener("click", save);
@@ -14,7 +15,122 @@ document.getElementById("enableDropDownNames").addEventListener("click", save);
 document.getElementById("textSaveMode").addEventListener("click", save);
 document.getElementById("customDataEnabled").addEventListener("click", saveAndReload);
 document.getElementById("jiraLocation").addEventListener("keyup", save);
+document.getElementById("backendLocation").addEventListener("keyup", save);
 document.getElementById("triggerDelay").addEventListener("keyup", save);
+
+/*
+DESPARATELY NEED A CLEANUP - COPIED FROM MAIN CODE
+*/
+
+
+function ajaxPost(path, params) {
+
+	var ajax = {};
+	ajax.x = function () {
+		if (typeof XMLHttpRequest !== 'undefined') {
+			return new XMLHttpRequest();
+		}
+		var versions = [
+			"MSXML2.XmlHttp.6.0",
+			"MSXML2.XmlHttp.5.0",
+			"MSXML2.XmlHttp.4.0",
+			"MSXML2.XmlHttp.3.0",
+			"MSXML2.XmlHttp.2.0",
+			"Microsoft.XmlHttp"
+		];
+
+		var xhr;
+		for (var i = 0; i < versions.length; i++) {
+			try {
+				xhr = new ActiveXObject(versions[i]);
+				break;
+			} catch (e) {}
+		}
+		return xhr;
+	};
+
+	ajax.send = function (url, callback, method, data, async) {
+		if (async === undefined) {
+			async = true;
+		}
+		var x = ajax.x();
+		x.open(method, url, async);
+		x.onreadystatechange = function () {
+			if (x.readyState == 4) {
+				callback(x.responseText)
+			}
+		};
+		if (method == 'POST') {
+			x.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+		}
+		x.send(data)
+	};
+
+	ajax.post = function (url, data, callback, async) {
+		var query = [];
+		for (var key in data) {
+			query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
+		}
+		ajax.send(url, callback, 'POST', query.join('&'), async)
+	};
+	ajax.post(path, params, function () {});
+}
+
+function ajaxGet(path, params) {
+
+	var ajax = {};
+	ajax.x = function () {
+		if (typeof XMLHttpRequest !== 'undefined') {
+			return new XMLHttpRequest();
+		}
+		var versions = [
+			"MSXML2.XmlHttp.6.0",
+			"MSXML2.XmlHttp.5.0",
+			"MSXML2.XmlHttp.4.0",
+			"MSXML2.XmlHttp.3.0",
+			"MSXML2.XmlHttp.2.0",
+			"Microsoft.XmlHttp"
+		];
+
+		var xhr;
+		for (var i = 0; i < versions.length; i++) {
+			try {
+				xhr = new ActiveXObject(versions[i]);
+				break;
+			} catch (e) {}
+		}
+		return xhr;
+	};
+
+	ajax.send = function (url, callback, method, data, async) {
+		if (async === undefined) {
+			async = true;
+		}
+		var x = ajax.x();
+		x.open(method, url, async);
+		x.onreadystatechange = function () {
+			if (x.readyState == 4) {
+				callback(x.responseText)
+			}
+		};
+		if (method == 'POST') {
+			x.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+		}
+		x.send(data)
+		return x.responseText;
+	};
+	ajax.get = function (url, data, callback, async) {
+		var query = [];
+		for (var key in data) {
+			query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
+		}
+		return ajax.send(url + (query.length ? '?' + query.join('&') : ''), callback, 'GET', null, async)
+	};
+	var result =
+	ajax.get(path, params, function (r) {return r}, false);
+	return result;
+}
+
 
 /*
 INITIAL LOAD -- SET DEFAULT VALUES
@@ -23,10 +139,14 @@ if (localStorage.getItem("initialized") != 'true') {
 	var initialArray = [["", "To do", "To Investigate", "To Test", "Waiting for answer", "Needs BA/discussion", "WIP", "Awaiting code review", "To Redo/fix", "Ready for check-in", "Checked in", "Done"]];
 	saveData = {
 		"dropDownArraysConfig" : JSON.stringify(initialArray),
+		"dropDownNames" : "[]",
+		"dropDownMappings" : "[]",
+		"enabledBoxesConfig" : "[]",
 		"notesConfig" : true,
 		"cleanupConfig" : true,
 		"stashConfig" : true,
 		"textSaveMode" : "keyup",
+		"backendSave" : "",
 		"triggerDelay" : "750"
 	};
 	localStorage.setItem(CONFIG_SAVE_DATA, JSON.stringify(saveData));
@@ -74,6 +194,7 @@ function addDropDown() {
 
 function save() {
 	var jiraLocation = document.getElementById("jiraLocation").value;
+	var backendLocation = document.getElementById("backendLocation").value;
 	var triggerDelay = document.getElementById("triggerDelay").value;
 	var notesEnabled = document.getElementById("notesEnabled").checked;
 	var stashEnabled = document.getElementById("stashEnabled").checked;
@@ -86,6 +207,7 @@ function save() {
 	var dropDowns = document.getElementsByClassName("dropDowns");
 	var dropDownNewNames = document.getElementsByClassName("dropDownName");
 	var textSaveMode = document.getElementById("textSaveMode").value;
+	var backendSave = document.getElementById("backendSave").checked;
 	var dropDownsValues = [];
 	var dropDownNames = [];
 	var colorMappings = {};
@@ -130,6 +252,7 @@ function save() {
 	} 
 	saveData = {
 		"jiraLocationConfig" : jiraLocation,
+		"backendLocation" : backendLocation,
 		"triggerDelay" : triggerDelay,
 		"dropDownArraysConfig" : JSON.stringify(dropDownsValues),
 		"dropDownMappings" : JSON.stringify(colorMappings),
@@ -143,9 +266,15 @@ function save() {
 		"watcherBlur" : watcherBlur,
 		"enableDropDownNames" : enableDropDownNames,
 		"stashConfig" : stashEnabled,
-		"textSaveMode" : textSaveMode
+		"textSaveMode" : textSaveMode,
+		"backendSave" : backendSave
 	};
-	localStorage.setItem(CONFIG_SAVE_DATA, JSON.stringify(saveData));
+	var val = JSON.stringify(saveData);
+	localStorage.setItem(CONFIG_SAVE_DATA, val);
+	if (backendSave===true) {
+		var stringifiedVal = JSON.stringify(val);
+		ajaxPost(backendLocation + "/persist/settings", {"key" : CONFIG_SAVE_DATA, "value" : stringifiedVal.substring(1, stringifiedVal.length-1)});
+	}
 }
 
 
@@ -156,6 +285,22 @@ function saveAndReload() {
 
 function loadConfig() {
 	var data = JSON.parse(localStorage.getItem(CONFIG_SAVE_DATA));
+	if (data["backendSave"] != null && data["backendSave"] !== "") {
+		var backendSave = JSON.parse(data["backendSave"]);
+		var backendLocation = data["backendLocation"];
+		if (backendSave) {
+			var backendSideString = ajaxGet(backendLocation + "/persist/settings");
+			console.log(backendSideString)
+			console.log(localStorage.getItem(CONFIG_SAVE_DATA))
+			if (backendSideString !== null && backendSideString !== ""){
+				var backendSide = JSON.parse(backendSideString);
+				console.log(backendSide);
+				if (backendSide !== null && backendSide !== "") {
+					data = backendSide;
+				}
+			}
+		}
+	}
 	var jiraLocation = data["jiraLocationConfig"];
 	var textSaveMode = data["textSaveMode"];
 	var triggerDelay = data["triggerDelay"];
@@ -173,6 +318,7 @@ function loadConfig() {
 	var enabledBoxes = JSON.parse(data["enabledBoxesConfig"]);
 
 	document.getElementById("jiraLocation").value = jiraLocation;
+	document.getElementById("backendLocation").value = backendLocation;
 	document.getElementById("triggerDelay").value = triggerDelay;
 	document.getElementById("textSaveMode").value = textSaveMode;
 	if (notes === true) {
@@ -199,11 +345,17 @@ function loadConfig() {
 	if (customData === true) {
 		document.getElementById("customDataEnabled").checked = true;
 	}
+	if (backendSave === true) {
+		document.getElementById("backendSave").checked = true;
+	}
 	if (dropDowns != null) {
 		for (var i = 0; i < dropDowns.length; ++i) {
 			var newTextArea = addDropDown();
 			var content = dropDowns[i].toString();
-			var map = JSON.parse(mappings[i]);
+			var map = {};
+			if (mappings[i] !== null && mappings[i] !== undefined) {
+				var map = JSON.parse(mappings[i]);
+			}
 			var splitContent = content.split(',');
 			for (var j=0;j<splitContent.length; ++j){
 				if (map.hasOwnProperty(splitContent[j])){
